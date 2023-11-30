@@ -111,7 +111,7 @@ impl TilePipeline {
     ) {
         self.instances.update(device, encoder, belt, &state.grid);
 
-        let view = TileView::new(&state.camera, size, 100);
+        let view = TileView::new(&state.camera, size, state.width);
         self.view.update(device, encoder, belt, view);
     }
 
