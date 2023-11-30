@@ -1,12 +1,14 @@
+use std::marker::PhantomData;
+
 use wgpu::VertexAttribute;
 
 pub struct Instances<T: bytemuck::Pod> {
-    data: Vec<T>,
     len: usize,
     buffer: wgpu::Buffer,
     location: u32,
     attrs: [VertexAttribute; 1],
     label: String,
+    data: PhantomData<T>,
 }
 
 impl<T: bytemuck::Pod> Instances<T> {
@@ -16,13 +18,12 @@ impl<T: bytemuck::Pod> Instances<T> {
         encoder: &mut wgpu::CommandEncoder,
         belt: &mut wgpu::util::StagingBelt,
         data: &[T],
-        size: usize,
     ) {
-        if size != self.len {
-            self.len = size;
+        if data.len() != self.len {
+            self.len = data.len();
             self.buffer = Self::init_buf(device, &self.label, self.len);
         }
-        if size == 0 {
+        if self.len == 0 {
             return;
         }
         // TODO: "damage tracking" ?
@@ -31,7 +32,7 @@ impl<T: bytemuck::Pod> Instances<T> {
             &self.buffer,
             0,
             unsafe {
-                std::num::NonZeroU64::new_unchecked((size * std::mem::size_of::<T>()) as u64)
+                std::num::NonZeroU64::new_unchecked((self.len * std::mem::size_of::<T>()) as u64)
             },
             device,
         );
@@ -46,7 +47,6 @@ impl<T: bytemuck::Pod> Instances<T> {
     ) -> Self {
         Self {
             len: 0,
-            data: Vec::new(),
             buffer: Self::init_buf(device, label, 0),
             location,
             attrs: [wgpu::VertexAttribute {
@@ -55,6 +55,7 @@ impl<T: bytemuck::Pod> Instances<T> {
                 shader_location: location,
             }],
             label: label.to_string(),
+            data: PhantomData {},
         }
     }
 

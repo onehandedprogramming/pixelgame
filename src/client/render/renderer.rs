@@ -105,13 +105,11 @@ impl Renderer {
         }
     }
 
-    pub fn start_encoder(&mut self) {
-        self.encoder = Some(
-            self.device
-                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Render Encoder"),
-                }),
-        );
+    fn create_encoder(&mut self) -> wgpu::CommandEncoder {
+        self.device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            })
     }
 
     pub fn draw(&mut self) {
@@ -119,7 +117,7 @@ impl Renderer {
         let view = output
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
-        let mut encoder = self.encoder.take().expect("encoder not started");
+        let mut encoder = self.encoder.take().unwrap_or(self.create_encoder());
         {
             let render_pass = &mut encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
@@ -145,18 +143,17 @@ impl Renderer {
     }
 
     pub fn update<'a>(&mut self, state: &ClientState) {
-        let size = &self.window.inner_size();
-        if size.width != self.config.width || size.height != self.config.height {
-            self.resize();
-        }
-
-        let mut encoder = self.encoder.take().expect("encoder not started");
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
         let camera_view = self.tile_pipeline.update(
             &self.device,
             &mut encoder,
             &mut self.staging_belt,
-            &state.camera,
-            size,
+            state,
+            &self.window.inner_size(),
         );
         self.encoder = Some(encoder);
 

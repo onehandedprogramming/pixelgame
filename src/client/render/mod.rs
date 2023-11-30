@@ -1,6 +1,6 @@
 mod instance;
 mod renderer;
-mod tile;
+pub mod tile;
 mod uniform;
 
 pub use renderer::*;
