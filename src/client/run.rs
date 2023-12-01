@@ -36,7 +36,7 @@ pub async fn run_client() {
                 if now > target {
                     target += frame_time;
 
-                    exit |= update(&mut state, &input);
+                    exit |= update(&mut state, &input, &renderer);
                     input.end();
                     renderer.update(&state);
                     renderer.draw();

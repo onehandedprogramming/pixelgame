@@ -1,54 +1,35 @@
-use winit::dpi::PhysicalSize;
-
-use crate::{util::point::Point, client::camera::Camera};
-
-const DEFAULT_SCALE: f32 = 0.02;
+use crate::{util::point::Point, client::render::{uniform::UniformData, RenderUpdateData}};
 
 #[repr(C)]
-#[derive(Clone, Copy, PartialEq, bytemuck::Zeroable, bytemuck::Pod)]
+#[repr(align(16))]
+#[derive(Clone, Copy, PartialEq, bytemuck::Zeroable)]
 pub struct TileView {
-    pos: Point<f32>,
-    proj: Point<f32>,
-    width: u32,
-    padding: u32,
+    pub pos: Point<f32>,
+    pub proj: Point<f32>,
+    pub width: u32,
+}
+
+unsafe impl bytemuck::Pod for TileView {}
+
+impl UniformData for TileView {
+    fn update(&mut self, data: &RenderUpdateData) -> bool {
+        let new = TileView {
+            pos: -data.state.camera.pos,
+            proj: data.state.camera.proj_for(data.size),
+            width: data.state.width
+        };
+        if *self == new {
+            false
+        } else {
+            *self = new;
+            true
+        }
+    }
 }
 
 impl Default for TileView {
     fn default() -> Self {
-        Self { pos: Point::zero(), proj: Point::zero(), width: 0, padding: 0 }
+        Self { pos: Point::zero(), proj: Point::zero(), width: 0 }
     }
 }
 
-impl TileView {
-    pub fn new(camera: &Camera, size: &PhysicalSize<u32>, width: u32) -> Self {
-        Self {
-            pos: -camera.pos,
-            proj: Self::calc_proj(camera, size),
-            width,
-            padding: 0
-        }
-    }
-
-    pub fn world_dimensions(&self) -> (f32, f32) {
-        (2.0 / self.proj.x, 2.0 / self.proj.y)
-    }
-
-    pub fn render_to_world(&self, coords: Point<f32>) -> Point<f32> {
-        coords / self.proj + self.pos
-    }
-
-    pub fn world_to_render(&self, coords: Point<f32>) -> Point<f32> {
-        (coords - self.pos) * self.proj
-    }
-
-    fn calc_proj(camera: &Camera, size: &PhysicalSize<u32>) -> Point<f32> {
-        let win_aspect = size.width as f32 / size.height as f32;
-        let mut proj = if win_aspect > camera.aspect {
-            Point::new(1.0, win_aspect)
-        } else {
-            Point::new(camera.aspect / win_aspect, camera.aspect)
-        };
-        proj *= camera.scale * DEFAULT_SCALE;
-        proj
-    }
-}

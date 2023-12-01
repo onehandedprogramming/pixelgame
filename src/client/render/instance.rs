@@ -1,5 +1,4 @@
 use std::marker::PhantomData;
-
 use wgpu::VertexAttribute;
 
 pub struct Instances<T: bytemuck::Pod> {

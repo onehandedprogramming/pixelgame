@@ -1,6 +1,7 @@
 use super::tile::TilePipeline;
 use crate::client::{rsc::CLEAR_COLOR, ClientState};
 use winit::{
+    dpi::PhysicalSize,
     event_loop::EventLoop,
     window::{Fullscreen, Window, WindowBuilder},
 };
@@ -148,16 +149,16 @@ impl Renderer {
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("Render Encoder"),
             });
-        let camera_view = self.tile_pipeline.update(
+        self.tile_pipeline.update(
             &self.device,
             &mut encoder,
             &mut self.staging_belt,
-            state,
-            &self.window.inner_size(),
+            &RenderUpdateData {
+                state,
+                size: &self.window.inner_size(),
+            },
         );
         self.encoder = Some(encoder);
-
-        camera_view
     }
 
     pub fn resize(&mut self) {
@@ -166,4 +167,9 @@ impl Renderer {
         self.config.height = size.height;
         self.surface.configure(&self.device, &self.config);
     }
+}
+
+pub struct RenderUpdateData<'a> {
+    pub state: &'a ClientState,
+    pub size: &'a PhysicalSize<u32>,
 }

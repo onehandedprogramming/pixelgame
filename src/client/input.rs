@@ -52,6 +52,7 @@ impl Input {
             }
             WindowEvent::CursorLeft { .. } => {
                 self.pressed.clear();
+                self.mouse_pressed.clear();
             }
             WindowEvent::CursorMoved { position, .. } => {
                 self.mouse_pixel_pos = Point::new(position.x as f32, position.y as f32);

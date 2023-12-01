@@ -1,10 +1,5 @@
-use winit::dpi::PhysicalSize;
-
 use super::{instance::TileInstance, view::TileView};
-use crate::client::{
-    render::{instance::Instances, uniform::Uniform},
-    ClientState,
-};
+use crate::client::render::{instance::Instances, uniform::Uniform, RenderUpdateData};
 
 pub struct TilePipeline {
     pipeline: wgpu::RenderPipeline,
@@ -106,13 +101,11 @@ impl TilePipeline {
         device: &wgpu::Device,
         encoder: &mut wgpu::CommandEncoder,
         belt: &mut wgpu::util::StagingBelt,
-        state: &ClientState,
-        size: &PhysicalSize<u32>,
+        update_data: &RenderUpdateData,
     ) {
-        self.instances.update(device, encoder, belt, &state.grid);
-
-        let view = TileView::new(&state.camera, size, state.width);
-        self.view.update(device, encoder, belt, view);
+        self.instances
+            .update(device, encoder, belt, &update_data.state.grid);
+        self.view.update(device, encoder, belt, update_data);
     }
 
     pub fn draw<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {

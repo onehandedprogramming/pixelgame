@@ -1,12 +1,18 @@
 use wgpu::util::DeviceExt;
 
-pub struct Uniform<T: bytemuck::Pod + PartialEq> {
+use super::RenderUpdateData;
+
+pub trait UniformData {
+    fn update(&mut self, data: &RenderUpdateData) -> bool;
+}
+
+pub struct Uniform<T: bytemuck::Pod + PartialEq + UniformData> {
     data: T,
     buffer: wgpu::Buffer,
     binding: u32,
 }
 
-impl<T: Default + PartialEq + bytemuck::Pod> Uniform<T> {
+impl<T: Default + PartialEq + bytemuck::Pod + UniformData> Uniform<T> {
     pub fn init(device: &wgpu::Device, name: &str, binding: u32) -> Self {
         let data = T::default();
         Self {
@@ -21,7 +27,7 @@ impl<T: Default + PartialEq + bytemuck::Pod> Uniform<T> {
     }
 }
 
-impl<T: PartialEq + bytemuck::Pod> Uniform<T> {
+impl<T: PartialEq + bytemuck::Pod + UniformData> Uniform<T> {
     pub fn bind_group_entry(&self) -> wgpu::BindGroupEntry {
         return wgpu::BindGroupEntry {
             binding: self.binding,
@@ -33,11 +39,10 @@ impl<T: PartialEq + bytemuck::Pod> Uniform<T> {
         device: &wgpu::Device,
         encoder: &mut wgpu::CommandEncoder,
         belt: &mut wgpu::util::StagingBelt,
-        data: T,
+        update_data: &RenderUpdateData,
     ) {
-        if data != self.data {
-            self.data = data;
-            let slice = &[data];
+        if self.data.update(update_data) {
+            let slice = &[self.data];
             let mut view = belt.write_buffer(
                 encoder,
                 &self.buffer,

@@ -2,7 +2,7 @@ use std::ops::{Add, AddAssign, BitAnd, Div, DivAssign, Mul, MulAssign, Neg, Sub,
 
 #[repr(C, packed)]
 #[derive(Clone, Copy, Debug, PartialEq, Default, bytemuck::Zeroable, bytemuck::Pod)]
-pub struct Point<T: Copy> {
+pub struct Point<T> {
     pub x: T,
     pub y: T,
 }
@@ -49,6 +49,17 @@ impl Point<f32> {
             y: self.y.floor(),
         }
     }
+
+    pub fn to_grid(&self, size: Point<u32>) -> Option<Point<u32>> {
+        if self.x < 0.0 || self.y < 0.0 {
+            return None
+        }
+        let truncated = Point {x: self.x as u32, y: self.y as u32};
+        if truncated.x > size.x - 1 || truncated.y > size.y - 1 {
+            return None
+        }
+        Some(truncated)
+    }
 }
 
 impl<T: Default + Copy> Point<T> {
@@ -63,6 +74,40 @@ impl<T: Default + Copy> Point<T> {
 impl<T: Add<Output = T> + Mul<Output = T> + Copy> Point<T> {
     pub fn index(&self, width: T) -> T {
         self.y * width + self.x
+    }
+}
+
+impl Point<i32> {
+    pub fn clamp_usize(&self, max: Point<usize>) -> Point<usize> {
+        return Point {
+            x: (self.x.max(0) as usize).min(max.x),
+            y: (self.y.max(0) as usize).min(max.y),
+        };
+    }
+}
+
+impl<T: Neg<Output = T> + Copy> Neg for Point<T> {
+    type Output = Point<T>;
+    fn neg(self) -> Self::Output {
+        Self {
+            x: -self.x,
+            y: -self.y,
+        }
+    }
+}
+
+impl<T : Ord + Copy> Point<T> {
+    pub fn min(&self, other: Self) -> Self {
+        Self {
+            x: self.x.min(other.x),
+            y: self.y.min(other.y),
+        }
+    }
+    pub fn max(&self, other: Self) -> Self {
+        Self {
+            x: self.x.max(other.x),
+            y: self.y.max(other.y),
+        }
     }
 }
 
@@ -243,40 +288,6 @@ impl<T: BitAnd<Output = T> + Copy> BitAnd<T> for Point<T> {
         Self {
             x: self.x & rhs,
             y: self.y & rhs,
-        }
-    }
-}
-
-impl Point<i32> {
-    pub fn clamp_usize(&self, max: Point<usize>) -> Point<usize> {
-        return Point {
-            x: (self.x.max(0) as usize).min(max.x),
-            y: (self.y.max(0) as usize).min(max.y),
-        };
-    }
-}
-
-impl<T: Neg<Output = T> + Copy> Neg for Point<T> {
-    type Output = Point<T>;
-    fn neg(self) -> Self::Output {
-        Self {
-            x: -self.x,
-            y: -self.y,
-        }
-    }
-}
-
-impl<T : Ord + Copy> Point<T> {
-    pub fn min(&self, other: Self) -> Self {
-        Self {
-            x: self.x.min(other.x),
-            y: self.y.min(other.y),
-        }
-    }
-    pub fn max(&self, other: Self) -> Self {
-        Self {
-            x: self.x.max(other.x),
-            y: self.y.max(other.y),
         }
     }
 }

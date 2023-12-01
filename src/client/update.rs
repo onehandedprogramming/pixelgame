@@ -1,7 +1,12 @@
-use super::{input::Input, ClientState, render::tile::TileInstance};
+use crate::util::point::Point;
+
+use super::{input::Input, ClientState, render::{tile::TileInstance, Renderer}};
 use winit::event::VirtualKeyCode as Key;
 
-pub fn update(state: &mut ClientState, input: &Input) -> bool {
+pub fn update(state: &mut ClientState, input: &Input, renderer: &Renderer) -> bool {
+    let cursor_pos = state.camera.cursor_world_pos(input.mouse_pixel_pos, &renderer.window.inner_size());
+    let grid_pos = cursor_pos.to_grid(Point {x: 100, y: 100});
+
     if input.just_pressed(Key::Escape) {
         return true;
     }
@@ -30,6 +35,9 @@ pub fn update(state: &mut ClientState, input: &Input) -> bool {
             b: 1.0,
             a: 1.0,
         }
+    }
+    if input.just_pressed(Key::P) {
+        println!("{:?}", grid_pos);
     }
 
     false
