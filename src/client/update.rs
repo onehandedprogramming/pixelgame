@@ -5,7 +5,7 @@ use winit::event::VirtualKeyCode as Key;
 
 pub fn update(state: &mut ClientState, input: &Input, renderer: &Renderer) -> bool {
     let cursor_pos = state.camera.cursor_world_pos(input.mouse_pixel_pos, &renderer.window.inner_size());
-    let grid_pos = cursor_pos.to_grid(Point {x: 100, y: 100});
+    let cursor_grid_pos = cursor_pos.to_grid(Point {x: 100, y: 100});
 
     if input.just_pressed(Key::Escape) {
         return true;
@@ -28,16 +28,25 @@ pub fn update(state: &mut ClientState, input: &Input, renderer: &Renderer) -> bo
     if input.pressed(Key::S) {
         pos.x += move_dist;
     }
-    if input.pressed(Key::T) {
-        state.grid[0] = TileInstance {
-            r: 1.0,
-            g: 1.0,
-            b: 1.0,
-            a: 1.0,
+    if input.mouse_pressed(winit::event::MouseButton::Left) {
+        if let Some(pos) = cursor_grid_pos {
+            state.grid[pos.index(100) as usize] = TileInstance {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            }
         }
     }
-    if input.just_pressed(Key::P) {
-        println!("{:?}", grid_pos);
+    if input.mouse_pressed(winit::event::MouseButton::Right) {
+        if let Some(pos) = cursor_grid_pos {
+            state.grid[pos.index(100) as usize] = TileInstance {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.0,
+            }
+        }
     }
 
     false
