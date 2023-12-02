@@ -14,6 +14,7 @@ pub async fn run_client() {
 
     let mut target = Instant::now();
     let mut input = Input::new();
+    let mut prev_update = Instant::now();
 
     renderer.window.set_visible(true);
 
@@ -35,8 +36,10 @@ pub async fn run_client() {
                 let now = Instant::now();
                 if now > target {
                     target += frame_time;
+                    let delta = now - prev_update;
+                    prev_update = now;
 
-                    exit |= update(&mut state, &input, &renderer);
+                    exit |= update(&mut state, &input, &renderer, &delta);
                     input.end();
                     renderer.update(&state);
                     renderer.draw();

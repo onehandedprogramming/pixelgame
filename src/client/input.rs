@@ -6,6 +6,7 @@ use crate::util::point::Point;
 
 pub struct Input {
     pub mouse_pixel_pos: Point<f32>,
+    pub mouse_delta: Point<f32>,
 
     pressed: HashSet<VirtualKeyCode>,
     just_pressed: HashSet<VirtualKeyCode>,
@@ -21,6 +22,7 @@ impl Input {
     pub fn new() -> Self {
         Self {
             mouse_pixel_pos: Point::zero(),
+            mouse_delta: Point::zero(),
             pressed: HashSet::new(),
             just_pressed: HashSet::new(),
             mouse_pressed: HashSet::new(),
@@ -55,7 +57,9 @@ impl Input {
                 self.mouse_pressed.clear();
             }
             WindowEvent::CursorMoved { position, .. } => {
-                self.mouse_pixel_pos = Point::new(position.x as f32, position.y as f32);
+                let new = Point::new(position.x as f32, position.y as f32);
+                self.mouse_delta = new - self.mouse_pixel_pos;
+                self.mouse_pixel_pos = new;
             }
             WindowEvent::MouseInput { button, state, .. } => {
                 match state {
