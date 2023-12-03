@@ -1,8 +1,8 @@
-const THE_N: usize = 98;
+const THE_N: usize = 20;
 const SIZE: usize = (THE_N + 2) * (THE_N + 2);
 pub struct World {
-    pub u: Vec<f32>,
-    pub v: Vec<f32>,
+    pub vx: Vec<f32>,
+    pub vy: Vec<f32>,
     pub dens: Vec<f32>,
     pub u_prev: Vec<f32>,
     pub v_prev: Vec<f32>,
@@ -12,8 +12,8 @@ pub struct World {
 impl World {
     pub fn new() -> Self {
         Self {
-            u: vec![0.0; SIZE],
-            v: vec![0.0; SIZE],
+            vx: vec![0.0; SIZE],
+            vy: vec![0.0; SIZE],
             dens: vec![0.0; SIZE],
             u_prev: vec![0.0; SIZE],
             v_prev: vec![0.0; SIZE],
@@ -24,19 +24,19 @@ impl World {
     pub fn update(&mut self, dt: f32) {
         vel_step(
             THE_N,
-            &mut self.u,
-            &mut self.v,
+            &mut self.vx,
+            &mut self.vy,
             &mut self.u_prev,
             &mut self.v_prev,
-            0.1,
+            0.000001,
             dt,
         );
         dens_step(
             THE_N,
             &mut self.dens,
             &mut self.dens_prev,
-            &mut self.u,
-            &mut self.v,
+            &mut self.vx,
+            &mut self.vy,
             0.01,
             dt,
         );
@@ -47,9 +47,9 @@ impl World {
     }
 }
 
-fn add_source(n: usize, x: &mut [f32], s: &[f32], dt: f32) {
+fn add_source(n: usize, x: &mut [f32], s: &mut [f32], dt: f32) {
     for i in 0..(n + 2) * (n + 2) {
-        x[i] += dt * s[i]
+        x[i] += dt * s[i];
     }
 }
 
@@ -84,35 +84,50 @@ fn set_bnd(n: usize, b: i32, x: &mut [f32]) {
     x[ix(n + 1, n + 1)] = 0.5 * (x[ix(n, n + 1)] + x[ix(n + 1, n)]);
 }
 
-fn advect(n: usize, b: i32, d: &mut [f32], d0: &[f32], u: &[f32], v: &[f32], dt: f32) {
-    let dt0 = dt * n as f32;
+fn lerp(a: f32, b: f32, k: f32) -> f32 {
+    a + (k * (b - a))
+}
+
+fn advect(n: usize, b: i32, d: &mut [f32], d0: &[f32], vx: &[f32], vy: &[f32], dt: f32) {
     let n2 = n as f32;
+    let dt0 = dt * n as f32;
     for i in 1..=n {
         for j in 1..=n {
-            let mut x = i as f32 - dt0 * u[ix(i, j)];
-            let mut y = j as f32 - dt0 * v[ix(i, j)];
+            let mut x = i as f32 - dt0 * vx[ix(i, j)];
+            let mut y = j as f32 - dt0 * vy[ix(i, j)];
+            // println!("x={}", dt0 * vx[ix(i, j)]);
+            // println!("y={}", dt0 * vy[ix(i, j)]);
             if x < 0.5 {
                 x = 0.5;
             }
             if x > n2 + 0.5 {
                 x = n2 + 0.5;
             };
-            let i0 = x as usize;
-            let i1 = i0 + 1;
             if y < 0.5 {
                 y = 0.5;
             }
             if y > n2 + 0.5 {
                 y = n2 + 0.5;
             };
-            let j0 = y as usize;
+
+            let i0 = x.floor() as usize;
+            let i1 = i0 + 1;
+            let j0 = y.floor() as usize;
             let j1 = j0 + 1;
+
             let s1 = x - i0 as f32;
             let s0 = 1.0 - s1;
             let t1 = y - j0 as f32;
             let t0 = 1.0 - t1;
+
+            let prev = d[ix(i, j)];
+            let v0 = s0 * t0 * d0[ix(i0, j0)];
+            let v1 = s0 * t1 * d0[ix(i0, j1)];
+            let v2 = s1 * t0 * d0[ix(i1, j0)];
+            let v3 = s1 * t1 * d0[ix(i1, j1)];
             d[ix(i, j)] = s0 * (t0 * d0[ix(i0, j0)] + t1 * d0[ix(i0, j1)])
                 + s1 * (t0 * d0[ix(i1, j0)] + t1 * d0[ix(i1, j1)]);
+            // println!("diff={}", d[ix(i, j)] - prev);
         }
     }
     set_bnd(n, b, d);
@@ -120,41 +135,40 @@ fn advect(n: usize, b: i32, d: &mut [f32], d0: &[f32], u: &[f32], v: &[f32], dt:
 
 fn dens_step(
     n: usize,
-    x: &mut Vec<f32>,
-    x0: &mut Vec<f32>,
-    u: &[f32],
-    v: &[f32],
+    d: &mut Vec<f32>,
+    d0: &mut Vec<f32>,
+    vx: &[f32],
+    vy: &[f32],
     diff: f32,
     dt: f32,
 ) {
-    add_source(n, x, x0, dt);
-    std::mem::swap(x, x0);
-    diffuse(n, 0, x, x0, diff, dt);
-    std::mem::swap(x, x0);
-    advect(n, 0, x, x0, u, v, dt);
+    // std::mem::swap(d, d0);
+    // diffuse(n, 0, d, d0, diff, dt);
+    std::mem::swap(d, d0);
+    advect(n, 0, d, d0, vx, vy, dt);
 }
 
 fn vel_step(
     n: usize,
-    u: &mut Vec<f32>,
-    v: &mut Vec<f32>,
-    u0: &mut Vec<f32>,
-    v0: &mut Vec<f32>,
+    vx: &mut Vec<f32>,
+    vy: &mut Vec<f32>,
+    vx0: &mut Vec<f32>,
+    vy0: &mut Vec<f32>,
     visc: f32,
     dt: f32,
 ) {
-    add_source(n, u, u0, dt);
-    add_source(n, v, v0, dt);
-    std::mem::swap(u0, u);
-    std::mem::swap(v0, v);
-    diffuse(n, 1, u, u0, visc, dt);
-    diffuse(n, 2, v, v0, visc, dt);
-    project(n, u, v, u0, v0);
-    std::mem::swap(u0, u);
-    std::mem::swap(v0, v);
-    advect(n, 1, u, u0, u0, v0, dt);
-    advect(n, 2, v, v0, u0, v0, dt);
-    project(n, u, v, u0, v0);
+    add_source(n, vx, vx0, dt);
+    add_source(n, vy, vy0, dt);
+    std::mem::swap(vx0, vx);
+    std::mem::swap(vy0, vy);
+    diffuse(n, 1, vx, vx0, visc, dt);
+    diffuse(n, 2, vy, vy0, visc, dt);
+    project(n, vx, vy, vx0, vy0);
+    std::mem::swap(vx0, vx);
+    std::mem::swap(vy0, vy);
+    advect(n, 1, vx, vx0, vx0, vy0, dt);
+    advect(n, 2, vy, vy0, vx0, vy0, dt);
+    project(n, vx, vy, vx0, vy0);
 }
 
 fn project(n: usize, u: &mut [f32], v: &mut [f32], p: &mut [f32], div: &mut [f32]) {

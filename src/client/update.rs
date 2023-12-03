@@ -46,42 +46,64 @@ pub fn update(
         pos.x += move_dist;
     }
 
-    if input.pressed(Key::V) {
-        state.mouse_mode = MouseMode::Vel;
+    if input.just_pressed(Key::V) {
+        state.mouse_mode = match state.mouse_mode {
+            MouseMode::Vel => MouseMode::Dens,
+            MouseMode::Dens => MouseMode::Vel,
+        }
     }
 
-    match state.mouse_mode {
-        MouseMode::Dens => {
-            if input.mouse_pressed(winit::event::MouseButton::Left) {
-                if let Some(pos) = cursor_grid_pos {
-                    let i = pos.index(state.world.width() as u32) as usize;
-                    state.world.dens[i] += 1.0;
-                }
-            }
-            if input.mouse_pressed(winit::event::MouseButton::Right) {
-                if let Some(pos) = cursor_grid_pos {
-                    let i = pos.index(state.world.width() as u32) as usize;
-                    state.world.dens[i] = 0.0;
-                }
-            }
+    if input.mouse_pressed(winit::event::MouseButton::Left) {
+        if let Some(pos) = cursor_grid_pos {
+            let i = pos.index(state.world.width() as u32) as usize;
+            state.world.dens[i] += 1.0 * t_delta.as_secs_f32();
         }
-        MouseMode::Vel => {
-            if input.mouse_pressed(winit::event::MouseButton::Left) {
-                if let Some(pos) = cursor_grid_pos {
-                    let i = pos.index(state.world.width() as u32) as usize;
-                    state.world.u_prev[i] += input.mouse_delta.x;
-                    state.world.u[i] += input.mouse_delta.x;
-                    state.world.v_prev[i] += input.mouse_delta.y;
-                    state.world.v[i] += input.mouse_delta.y;
-                }
-            }
-            if input.mouse_pressed(winit::event::MouseButton::Right) {
-                if let Some(pos) = cursor_grid_pos {
-                    let i = pos.index(state.world.width() as u32) as usize;
-                    state.world.u_prev[i] = 0.0;
-                    state.world.v_prev[i] = 0.0;
-                }
-            }
+    }
+    if input.mouse_pressed(winit::event::MouseButton::Right) {
+        if let Some(pos) = cursor_grid_pos {
+            let i = pos.index(state.world.width() as u32) as usize;
+            state.world.dens[i] = 0.0;
+        }
+    }
+    if input.just_pressed(Key::Left) {
+        if let Some(pos) = cursor_grid_pos {
+            let i = pos.index(state.world.width() as u32) as usize;
+            state.world.vx[i] = -1.0;
+            state.world.vy[i] = 0.0;
+            state.world.dens[i] += 5.0 * t_delta.as_secs_f32();
+        }
+    }
+    if input.just_pressed(Key::Right) {
+        if let Some(pos) = cursor_grid_pos {
+            let i = pos.index(state.world.width() as u32) as usize;
+            state.world.vx[i] = 1.0;
+            state.world.vy[i] = 0.0;
+            state.world.dens[i] += 5.0 * t_delta.as_secs_f32();
+        }
+    }
+    if input.just_pressed(Key::Up) {
+        if let Some(pos) = cursor_grid_pos {
+            let i = pos.index(state.world.width() as u32) as usize;
+            state.world.vy[i] = 1.0;
+            state.world.vx[i] = 0.0;
+            state.world.dens[i] += 5.0 * t_delta.as_secs_f32();
+        }
+    }
+    if input.just_pressed(Key::Down) {
+        if let Some(pos) = cursor_grid_pos {
+            let i = pos.index(state.world.width() as u32) as usize;
+            state.world.vy[i] = -1.0;
+            state.world.vx[i] = 0.0;
+            state.world.dens[i] += 5.0 * t_delta.as_secs_f32();
+        }
+    }
+    if input.mouse_pressed(winit::event::MouseButton::Right) {
+        if let Some(pos) = cursor_grid_pos {
+            let i = pos.index(state.world.width() as u32) as usize;
+            state.world.vx[i] = 0.0;
+            state.world.vy[i] = 0.0;
+            state.world.u_prev[i] = 0.0;
+            state.world.v_prev[i] = 0.0;
         }
     }
 
@@ -91,11 +113,23 @@ pub fn update(
 
     state.world.update(t_delta.as_secs_f32());
     for (i, dens) in state.world.dens.iter().enumerate() {
-        state.grid[i] = TileInstance {
-            r: state.world.u[i],
-            g: state.world.v[i],
-            b: *dens,
-            a: 0.0,
+        match state.mouse_mode {
+            MouseMode::Dens => {
+                state.grid[i] = TileInstance {
+                    r: 0.0,
+                    g: 0.0,
+                    b: *dens,
+                    a: 0.0,
+                }
+            }
+            MouseMode::Vel => {
+                state.grid[i] = TileInstance {
+                    r: state.world.vx[i],
+                    g: state.world.vy[i],
+                    b: -state.world.vx[i],
+                    a: 0.0,
+                }
+            }
         }
     }
 
