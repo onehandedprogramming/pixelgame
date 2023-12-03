@@ -1,4 +1,4 @@
-const THE_N: usize = 20;
+const THE_N: usize = 100;
 const SIZE: usize = (THE_N + 2) * (THE_N + 2);
 pub struct World {
     pub vx: Vec<f32>,
