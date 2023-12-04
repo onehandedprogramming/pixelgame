@@ -56,81 +56,104 @@ pub fn update(
     if input.mouse_pressed(winit::event::MouseButton::Left) {
         if let Some(pos) = cursor_grid_pos {
             let i = pos.index(state.world.width() as u32) as usize;
-            state.world.dens[i] += 1.0 * t_delta.as_secs_f32();
+            state.world.n0[i] += 20.0 * t_delta.as_secs_f32();
         }
     }
     if input.mouse_pressed(winit::event::MouseButton::Right) {
         if let Some(pos) = cursor_grid_pos {
             let i = pos.index(state.world.width() as u32) as usize;
-            state.world.dens[i] = 0.0;
+            state.world.n0[i] = 0.0;
+            // state.world.nN[i] = 0.0;
+            // state.world.nS[i] = 0.0;
+            // state.world.nE[i] = 0.0;
+            // state.world.nW[i] = 0.0;
+            // state.world.nNW[i] = 0.0;
+            // state.world.nNE[i] = 0.0;
+            // state.world.nSW[i] = 0.0;
+            // state.world.nSE[i] = 0.0;
         }
     }
     if input.just_pressed(Key::Left) {
         if let Some(pos) = cursor_grid_pos {
             let i = pos.index(state.world.width() as u32) as usize;
-            state.world.vx[i] = -1.0;
-            state.world.vy[i] = 0.0;
-            state.world.dens[i] += 5.0 * t_delta.as_secs_f32();
+            state.world.nW[i] += 10.0;
         }
     }
     if input.just_pressed(Key::Right) {
         if let Some(pos) = cursor_grid_pos {
             let i = pos.index(state.world.width() as u32) as usize;
-            state.world.vx[i] = 1.0;
-            state.world.vy[i] = 0.0;
-            state.world.dens[i] += 5.0 * t_delta.as_secs_f32();
+            state.world.ux[i] = 1.0;
+            state.world.uy[i] = 0.0;
         }
     }
     if input.just_pressed(Key::Up) {
         if let Some(pos) = cursor_grid_pos {
             let i = pos.index(state.world.width() as u32) as usize;
-            state.world.vy[i] = 1.0;
-            state.world.vx[i] = 0.0;
-            state.world.dens[i] += 5.0 * t_delta.as_secs_f32();
+            state.world.uy[i] = 1.0;
+            state.world.ux[i] = 0.0;
         }
     }
     if input.just_pressed(Key::Down) {
         if let Some(pos) = cursor_grid_pos {
             let i = pos.index(state.world.width() as u32) as usize;
-            state.world.vy[i] = -1.0;
-            state.world.vx[i] = 0.0;
-            state.world.dens[i] += 5.0 * t_delta.as_secs_f32();
-        }
-    }
-    if input.mouse_pressed(winit::event::MouseButton::Right) {
-        if let Some(pos) = cursor_grid_pos {
-            let i = pos.index(state.world.width() as u32) as usize;
-            state.world.vx[i] = 0.0;
-            state.world.vy[i] = 0.0;
-            state.world.u_prev[i] = 0.0;
-            state.world.v_prev[i] = 0.0;
+            state.world.uy[i] = -1.0;
+            state.world.ux[i] = 0.0;
         }
     }
 
     if input.just_pressed(Key::T) {
-        println!("{}", state.world.dens.iter().sum::<f32>());
+        println!("all {}", state.world.rho.iter().sum::<f32>());
+        if let Some(pos) = cursor_grid_pos {
+            println!("cursor {}", state.world.rho[pos.index(state.world.width() as u32) as usize]);
+        }
     }
 
-    state.world.update(t_delta.as_secs_f32());
-    for (i, dens) in state.world.dens.iter().enumerate() {
-        match state.mouse_mode {
-            MouseMode::Dens => {
-                state.grid[i] = TileInstance {
+    // if input.just_pressed(Key::C) {
+        state.world.update(t_delta.as_secs_f32());
+    // }
+
+    if let Some(pos) = cursor_grid_pos {
+        if input.pressed(Key::B) {
+            let i = pos.index(state.world.width() as u32) as usize;
+            state.world.barrier[i] = true;
+        }
+        if input.pressed(Key::N) {
+            let i = pos.index(state.world.width() as u32) as usize;
+            state.world.barrier[i] = false;
+        }
+    }
+
+    for (i, dens) in state.world.rho.iter().enumerate() {
+        state.grid[i] = if state.world.barrier[i] {
+            TileInstance {
+                r: 1.0,
+                g: 1.0,
+                b: 1.0,
+                a: 1.0,
+            }
+        } else {
+            match state.mouse_mode {
+                MouseMode::Dens => TileInstance {
                     r: 0.0,
                     g: 0.0,
-                    b: *dens,
+                    b: *dens / 100.0,
                     a: 0.0,
-                }
-            }
-            MouseMode::Vel => {
-                state.grid[i] = TileInstance {
-                    r: state.world.vx[i],
-                    g: state.world.vy[i],
-                    b: -state.world.vx[i],
+                },
+                MouseMode::Vel => TileInstance {
+                    r: state.world.ux[i],
+                    g: state.world.uy[i],
+                    b: -state.world.ux[i],
                     a: 0.0,
                 }
             }
         }
+    }
+
+    if let Some(pos) = cursor_grid_pos {
+        let i = pos.index(state.world.width() as u32) as usize;
+        state.grid[i].r += 0.1;
+        state.grid[i].g += 0.1;
+        state.grid[i].b += 0.1;
     }
 
     false

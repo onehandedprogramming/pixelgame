@@ -1,208 +1,185 @@
-const THE_N: usize = 100;
-const SIZE: usize = (THE_N + 2) * (THE_N + 2);
+const VISC: f32 = 0.2;
+
 pub struct World {
-    pub vx: Vec<f32>,
-    pub vy: Vec<f32>,
-    pub dens: Vec<f32>,
-    pub u_prev: Vec<f32>,
-    pub v_prev: Vec<f32>,
-    pub dens_prev: Vec<f32>,
+    pub xdim: usize,
+    pub ydim: usize,
+    pub n0: Vec<f32>,			// microscopic densities along each lattice direction
+	pub nN: Vec<f32>,
+	pub nS: Vec<f32>,
+	pub nE: Vec<f32>,
+	pub nW: Vec<f32>,
+	pub nNE: Vec<f32>,
+    pub nSE: Vec<f32>,
+	pub nNW: Vec<f32>,
+	pub nSW: Vec<f32>,
+	pub rho: Vec<f32>,			// macroscopic density
+	pub ux: Vec<f32>,			// macroscopic velocity
+	pub uy: Vec<f32>,
+	pub curl: Vec<f32>,
+	pub barrier: Vec<bool>,	
 }
 
 impl World {
-    pub fn new() -> Self {
-        Self {
-            vx: vec![0.0; SIZE],
-            vy: vec![0.0; SIZE],
-            dens: vec![0.0; SIZE],
-            u_prev: vec![0.0; SIZE],
-            v_prev: vec![0.0; SIZE],
-            dens_prev: vec![0.0; SIZE],
-        }
+    pub fn new(dimx: usize, dimy: usize) -> Self {
+        let size = dimx * dimy;
+        let mut s = Self {
+            xdim: 128,
+            ydim: 128,
+            n0: vec![0.0; size],
+            nN: vec![0.0; size],
+            nS: vec![0.0; size],
+            nE: vec![0.0; size],
+            nW: vec![0.0; size],
+            nNE: vec![0.0; size],
+            nSE: vec![0.0; size],
+            nNW: vec![0.0; size],
+            nSW: vec![0.0; size],
+            rho: vec![0.0; size],
+            ux: vec![0.0; size],
+            uy: vec![0.0; size],
+            curl: vec![0.0; size],
+            barrier: vec![false; size],
+        };
+        s.initFluid();
+        s
     }
 
     pub fn update(&mut self, dt: f32) {
-        vel_step(
-            THE_N,
-            &mut self.vx,
-            &mut self.vy,
-            &mut self.u_prev,
-            &mut self.v_prev,
-            0.000001,
-            dt,
-        );
-        dens_step(
-            THE_N,
-            &mut self.dens,
-            &mut self.dens_prev,
-            &mut self.vx,
-            &mut self.vy,
-            0.01,
-            dt,
-        );
+        self.collide();
+        self.stream();
     }
 
     pub fn width(&self) -> usize {
-        return THE_N + 2;
+        return self.xdim;
     }
-}
 
-fn add_source(n: usize, x: &mut [f32], s: &mut [f32], dt: f32) {
-    for i in 0..(n + 2) * (n + 2) {
-        x[i] += dt * s[i];
-    }
-}
-
-fn ix(i: usize, j: usize) -> usize {
-    i + (THE_N + 2) * j
-}
-
-fn diffuse(n: usize, b: i32, x: &mut [f32], x0: &[f32], diff: f32, dt: f32) {
-    let a = dt * diff * (n * n) as f32;
-    for _ in 0..20 {
-        for i in 1..=n {
-            for j in 1..=n {
-                x[ix(i, j)] = (x0[ix(i, j)]
-                    + a * (x[ix(i - 1, j)] + x[ix(i + 1, j)] + x[ix(i, j - 1)] + x[ix(i, j + 1)]))
-                    / (1.0 + 4.0 * a);
+    // Collide particles within each cell (here's the physics!):
+    fn collide(&mut self) {
+        let viscosity = VISC;	// kinematic viscosity coefficient in natural units
+        let omega = 1.0 / (3.0*viscosity + 0.5);		// reciprocal of relaxation time
+        for y in 1..self.ydim-1 {
+            for x in 1..self.xdim-1 {
+                let i = x + y*self.xdim;		// array index for this lattice site
+                let thisrho = self.n0[i] + self.nN[i] + self.nS[i] + self.nE[i] + self.nW[i]
+                    + self.nNW[i] + self.nNE[i] + self.nSW[i] + self.nSE[i];
+                self.rho[i] = thisrho;
+                if thisrho <= 0.0 {
+                    continue;
+                }
+                let thisux = (self.nE[i] + self.nNE[i] + self.nSE[i] - self.nW[i] - self.nNW[i] - self.nSW[i]) / thisrho;
+                self.ux[i] = thisux;
+                let thisuy = (self.nN[i] + self.nNE[i] + self.nNW[i] - self.nS[i] - self.nSE[i] - self.nSW[i]) / thisrho;
+                self.uy[i] = thisuy;
+                let one9thrho = (1.0/9.0) * thisrho;		// pre-compute a bunch of stuff for optimization
+                let one36thrho = (1.0/36.0) * thisrho;
+                let ux3 = 3.0 * thisux;
+                let uy3 = 3.0 * thisuy;
+                let ux2 = thisux * thisux;
+                let uy2 = thisuy * thisuy;
+                let uxuy2 = 2.0 * thisux * thisuy;
+                let u2 = ux2 + uy2;
+                let u215 = 1.5 * u2;
+                self.n0[i]  += omega * ((4.0/9.0)*thisrho * (1.0                         - u215) - self.n0[i]);
+                self.nE[i]  += omega * (   one9thrho * (1.0 + ux3       + 4.5*ux2        - u215) - self.nE[i]);
+                self.nW[i]  += omega * (   one9thrho * (1.0 - ux3       + 4.5*ux2        - u215) - self.nW[i]);
+                self.nN[i]  += omega * (   one9thrho * (1.0 + uy3       + 4.5*uy2        - u215) - self.nN[i]);
+                self.nS[i]  += omega * (   one9thrho * (1.0 - uy3       + 4.5*uy2        - u215) - self.nS[i]);
+                self.nNE[i] += omega * (  one36thrho * (1.0 + ux3 + uy3 + 4.5*(u2+uxuy2) - u215) - self.nNE[i]);
+                self.nSE[i] += omega * (  one36thrho * (1.0 + ux3 - uy3 + 4.5*(u2-uxuy2) - u215) - self.nSE[i]);
+                self.nNW[i] += omega * (  one36thrho * (1.0 - ux3 + uy3 + 4.5*(u2-uxuy2) - u215) - self.nNW[i]);
+                self.nSW[i] += omega * (  one36thrho * (1.0 - ux3 - uy3 + 4.5*(u2+uxuy2) - u215) - self.nSW[i]);
             }
         }
-        set_bnd(n, b, x);
-    }
-}
-
-fn set_bnd(n: usize, b: i32, x: &mut [f32]) {
-    for i in 1..=n {
-        x[ix(0, i)] = if b == 1 { -x[ix(1, i)] } else { x[ix(1, i)] };
-        x[ix(n + 1, i)] = if b == 1 { -x[ix(n, i)] } else { x[ix(n, i)] };
-        x[ix(i, 0)] = if b == 2 { -x[ix(i, 1)] } else { x[ix(i, 1)] };
-        x[ix(i, n + 1)] = if b == 2 { -x[ix(i, n)] } else { x[ix(i, n)] };
-    }
-    x[ix(0, 0)] = 0.5 * (x[ix(1, 0)] + x[ix(0, 1)]);
-    x[ix(0, n + 1)] = 0.5 * (x[ix(1, n + 1)] + x[ix(0, n)]);
-    x[ix(n + 1, 0)] = 0.5 * (x[ix(n, 0)] + x[ix(n + 1, 1)]);
-    x[ix(n + 1, n + 1)] = 0.5 * (x[ix(n, n + 1)] + x[ix(n + 1, n)]);
-}
-
-fn lerp(a: f32, b: f32, k: f32) -> f32 {
-    a + (k * (b - a))
-}
-
-fn advect(n: usize, b: i32, d: &mut [f32], d0: &[f32], vx: &[f32], vy: &[f32], dt: f32) {
-    let n2 = n as f32;
-    let dt0 = dt * n as f32;
-    for i in 1..=n {
-        for j in 1..=n {
-            let mut x = i as f32 - dt0 * vx[ix(i, j)];
-            let mut y = j as f32 - dt0 * vy[ix(i, j)];
-            // println!("x={}", dt0 * vx[ix(i, j)]);
-            // println!("y={}", dt0 * vy[ix(i, j)]);
-            if x < 0.5 {
-                x = 0.5;
-            }
-            if x > n2 + 0.5 {
-                x = n2 + 0.5;
-            };
-            if y < 0.5 {
-                y = 0.5;
-            }
-            if y > n2 + 0.5 {
-                y = n2 + 0.5;
-            };
-
-            let i0 = x.floor() as usize;
-            let i1 = i0 + 1;
-            let j0 = y.floor() as usize;
-            let j1 = j0 + 1;
-
-            let s1 = x - i0 as f32;
-            let s0 = 1.0 - s1;
-            let t1 = y - j0 as f32;
-            let t0 = 1.0 - t1;
-
-            let prev = d[ix(i, j)];
-            let v0 = s0 * t0 * d0[ix(i0, j0)];
-            let v1 = s0 * t1 * d0[ix(i0, j1)];
-            let v2 = s1 * t0 * d0[ix(i1, j0)];
-            let v3 = s1 * t1 * d0[ix(i1, j1)];
-            d[ix(i, j)] = s0 * (t0 * d0[ix(i0, j0)] + t1 * d0[ix(i0, j1)])
-                + s1 * (t0 * d0[ix(i1, j0)] + t1 * d0[ix(i1, j1)]);
-            // println!("diff={}", d[ix(i, j)] - prev);
-        }
-    }
-    set_bnd(n, b, d);
-}
-
-fn dens_step(
-    n: usize,
-    d: &mut Vec<f32>,
-    d0: &mut Vec<f32>,
-    vx: &[f32],
-    vy: &[f32],
-    diff: f32,
-    dt: f32,
-) {
-    // std::mem::swap(d, d0);
-    // diffuse(n, 0, d, d0, diff, dt);
-    std::mem::swap(d, d0);
-    advect(n, 0, d, d0, vx, vy, dt);
-}
-
-fn vel_step(
-    n: usize,
-    vx: &mut Vec<f32>,
-    vy: &mut Vec<f32>,
-    vx0: &mut Vec<f32>,
-    vy0: &mut Vec<f32>,
-    visc: f32,
-    dt: f32,
-) {
-    add_source(n, vx, vx0, dt);
-    add_source(n, vy, vy0, dt);
-    std::mem::swap(vx0, vx);
-    std::mem::swap(vy0, vy);
-    diffuse(n, 1, vx, vx0, visc, dt);
-    diffuse(n, 2, vy, vy0, visc, dt);
-    project(n, vx, vy, vx0, vy0);
-    std::mem::swap(vx0, vx);
-    std::mem::swap(vy0, vy);
-    advect(n, 1, vx, vx0, vx0, vy0, dt);
-    advect(n, 2, vy, vy0, vx0, vy0, dt);
-    project(n, vx, vy, vx0, vy0);
-}
-
-fn project(n: usize, u: &mut [f32], v: &mut [f32], p: &mut [f32], div: &mut [f32]) {
-    let h = 1.0 / n as f32;
-    for i in 1..=n {
-        for j in 1..=n {
-            div[ix(i, j)] =
-                -0.5 * h * (u[ix(i + 1, j)] - u[ix(i - 1, j)] + v[ix(i, j + 1)] - v[ix(i, j - 1)]);
-            p[ix(i, j)] = 0.0;
-        }
+        // for y in 1..self.ydim-2 {
+        //     self.nW[self.xdim-1+y*self.xdim] = self.nW[self.xdim-2+y*self.xdim];		// at right end, copy left-flowing densities from next row to the left
+        //     self.nNW[self.xdim-1+y*self.xdim] = self.nNW[self.xdim-2+y*self.xdim];
+        //     self.nSW[self.xdim-1+y*self.xdim] = self.nSW[self.xdim-2+y*self.xdim];
+        // }
     }
 
-    set_bnd(n, 0, div);
-    set_bnd(n, 0, p);
+    // Move particles along their directions of motion:
+    fn stream(&mut self) {
+        let mut barrierCount = 0;
+        let mut barrierxSum = 0;
+        let mut barrierySum = 0;
+        let mut barrierFx = 0.0;
+        let mut barrierFy = 0.0;
 
-    for _ in 0..20 {
-        for i in 1..=n {
-            for j in 1..=n {
-                p[ix(i, j)] = (div[ix(i, j)]
-                    + p[ix(i - 1, j)]
-                    + p[ix(i + 1, j)]
-                    + p[ix(i, j - 1)]
-                    + p[ix(i, j + 1)])
-                    / 4.0;
+        for y in (1..self.ydim-1).rev() {		// first start in NW corner...
+            for x in 1..self.xdim-1 {
+                self.nN[x+y*self.xdim] = self.nN[x+(y-1)*self.xdim];			// move the north-moving particles
+                self.nNW[x+y*self.xdim] = self.nNW[x+1+(y-1)*self.xdim];		// and the northwest-moving particles
             }
         }
-        set_bnd(n, 0, p);
-    }
-    for i in 1..=n {
-        for j in 1..=n {
-            u[ix(i, j)] -= 0.5 * (p[ix(i + 1, j)] - p[ix(i - 1, j)]) / h;
-            v[ix(i, j)] -= 0.5 * (p[ix(i, j + 1)] - p[ix(i, j - 1)]) / h;
+        for y in (1..self.ydim-1).rev() { 		// now start in NE corner...
+            for x in (1..self.xdim-1).rev() {
+                self.nE[x+y*self.xdim] = self.nE[x-1+y*self.xdim];			// move the east-moving particles
+                self.nNE[x+y*self.xdim] = self.nNE[x-1+(y-1)*self.xdim];		// and the northeast-moving particles
+            }
+        }
+        for y in 1..self.ydim-1 {			// now start in SE corner...
+            for x in (1..self.xdim-1).rev() {
+                self.nS[x+y*self.xdim] = self.nS[x+(y+1)*self.xdim];			// move the south-moving particles
+                self.nSE[x+y*self.xdim] = self.nSE[x-1+(y+1)*self.xdim];		// and the southeast-moving particles
+            }
+        }
+        for y in 1..self.ydim-1 {                		// now start in the SW corner...
+            for x in 1..self.xdim-1 {
+                self.nW[x+y*self.xdim] = self.nW[x+1+y*self.xdim];			// move the west-moving particles
+                self.nSW[x+y*self.xdim] = self.nSW[x+1+(y+1)*self.xdim];		// and the southwest-moving particles
+            }
+        }
+        for y in 1..self.ydim-1 {               		// Now handle bounce-back from barriers
+            for x in 1..self.xdim-1 {
+                if self.barrier[x+y*self.xdim] {
+                    let index = x + y*self.xdim;
+                    self.nE[x+1+y*self.xdim] = self.nW[index];
+                    self.nW[x-1+y*self.xdim] = self.nE[index];
+                    self.nN[x+(y+1)*self.xdim] = self.nS[index];
+                    self.nS[x+(y-1)*self.xdim] = self.nN[index];
+                    self.nNE[x+1+(y+1)*self.xdim] = self.nSW[index];
+                    self.nNW[x-1+(y+1)*self.xdim] = self.nSE[index];
+                    self.nSE[x+1+(y-1)*self.xdim] = self.nNW[index];
+                    self.nSW[x-1+(y-1)*self.xdim] = self.nNE[index];
+                    // Keep track of stuff needed to plot force vector:
+                    barrierCount += 1;
+                    barrierxSum += x;
+                    barrierySum += y;
+                    barrierFx += self.nE[index] + self.nNE[index] + self.nSE[index] - self.nW[index] - self.nNW[index] - self.nSW[index];
+                    barrierFy += self.nN[index] + self.nNE[index] + self.nNW[index] - self.nS[index] - self.nSE[index] - self.nSW[index];
+                }
+            }
         }
     }
-    set_bnd(n, 1, u);
-    set_bnd(n, 2, v);
+
+    fn initFluid(&mut self) {
+		for y in 0..self.ydim {
+			for x in 0..self.xdim {
+				self.setEquil(x, y, 0.0, 0.0, 0.0);
+			}
+		}
+	}
+
+    fn setEquil(&mut self, x: usize, y: usize, newux: f32, newuy: f32, newrho: f32) {
+		let i = x + y*self.xdim;
+		let ux3 = 3.0 * newux;
+		let uy3 = 3.0 * newuy;
+		let ux2 = newux * newux;
+		let uy2 = newuy * newuy;
+		let uxuy2 = 2.0 * newux * newuy;
+		let u2 = ux2 + uy2;
+		let u215 = 1.5 * u2;
+		self.n0[i]  =  (4.0/9.0) * newrho * (1.0                              - u215);
+		self.nE[i]  =  (1.0/9.0) * newrho * (1.0 + ux3       + 4.5*ux2        - u215);
+		self.nW[i]  =  (1.0/9.0) * newrho * (1.0 - ux3       + 4.5*ux2        - u215);
+		self.nN[i]  =  (1.0/9.0) * newrho * (1.0 + uy3       + 4.5*uy2        - u215);
+		self.nS[i]  =  (1.0/9.0) * newrho * (1.0 - uy3       + 4.5*uy2        - u215);
+		self.nNE[i] = (1.0/36.0) * newrho * (1.0 + ux3 + uy3 + 4.5*(u2+uxuy2) - u215);
+		self.nSE[i] = (1.0/36.0) * newrho * (1.0 + ux3 - uy3 + 4.5*(u2-uxuy2) - u215);
+		self.nNW[i] = (1.0/36.0) * newrho * (1.0 - ux3 + uy3 + 4.5*(u2-uxuy2) - u215);
+		self.nSW[i] = (1.0/36.0) * newrho * (1.0 - ux3 - uy3 + 4.5*(u2+uxuy2) - u215);
+		self.rho[i] = newrho;
+		self.ux[i] = newux;
+		self.uy[i] = newuy;
+	}
 }
