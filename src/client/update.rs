@@ -136,13 +136,13 @@ pub fn update(
                 MouseMode::Dens => TileInstance {
                     r: 0.0,
                     g: 0.0,
-                    b: *dens / 100.0,
+                    b: (*dens - 0.08) * 10.0,
                     a: 0.0,
                 },
                 MouseMode::Vel => TileInstance {
-                    r: state.world.ux[i],
-                    g: state.world.uy[i],
-                    b: -state.world.ux[i],
+                    r: (state.world.ux[i] * 5.0 + 1.0) / 2.0,
+                    g: (state.world.uy[i] * 5.0 + 1.0) / 2.0,
+                    b: 0.0,
                     a: 0.0,
                 }
             }

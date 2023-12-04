@@ -155,7 +155,7 @@ impl World {
     fn initFluid(&mut self) {
 		for y in 0..self.ydim {
 			for x in 0..self.xdim {
-				self.setEquil(x, y, 0.0, 0.0, 0.0);
+				self.setEquil(x, y, 0.1, 0.0, 0.1);
 			}
 		}
 	}
