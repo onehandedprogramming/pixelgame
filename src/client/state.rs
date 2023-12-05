@@ -11,7 +11,7 @@ pub struct ClientState {
 
 impl ClientState {
     pub fn new() -> Self {
-        let world = World::new(128, 128);
+        let world = World::test(1);
         Self {
             camera: Camera::default(),
             camera_scroll: 0.0,
@@ -21,8 +21,8 @@ impl ClientState {
                 g: 0.0,
                 b: 0.0,
                 a: 0.0,
-            }; world.ux.len()],
-            width: world.width() as u32,
+            }; super::world::H*super::world::W],
+            width: super::world::W as u32,
             world,
         }
     }
