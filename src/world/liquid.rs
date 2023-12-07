@@ -100,7 +100,7 @@ impl LiquidGrid {
                                 dm[i2] += change;
 
                                 let fdir: Vec2<f32> = dir.into();
-                                let fdir = fdir * 0.1 + vel * change;
+                                let fdir = fdir * 0.1 + vel * change * 0.5;
                                 let sum = change + dr[i2];
                                 vm[i2] += (fdir * change + vr[i2] * dr[i2]) / sum - vr[i2];
 

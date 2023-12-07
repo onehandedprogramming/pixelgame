@@ -32,7 +32,7 @@ pub fn update(
     }
 
     if input.just_pressed(Key::V) {
-        state.mouse_mode = match state.mouse_mode {
+        state.view_mode = match state.view_mode {
             MouseMode::Vel => MouseMode::Dens,
             MouseMode::Dens => MouseMode::Vel,
         }
@@ -48,32 +48,42 @@ pub fn update(
     }
 
     for (i, dens) in state.world.water.dens.iter().enumerate() {
+        state.grid[i].r = 0.0;
+        state.grid[i].g = 0.0;
+        state.grid[i].b = 0.0;
+        state.grid[i].a = 1.0;
         if state.world.water.barrier[i] {
             state.grid[i].r = 1.0;
             state.grid[i].g = 1.0;
             state.grid[i].b = 1.0;
             state.grid[i].a = 1.0;
-        } else if dens.is_nan() || dens.is_infinite() {
-            state.grid[i].r = 1.0;
-            state.grid[i].g = 0.2;
-            state.grid[i].b = 0.0;
-            state.grid[i].a = 1.0;
-        } else if state.world.water.vel[i].x.is_nan() {
-            state.grid[i].r = 1.0;
-            state.grid[i].g = 0.8;
-            state.grid[i].b = 0.0;
-            state.grid[i].a = 1.0;
-        } else if *dens > 0.0 {
-            let b = (*dens * 0.7 + 0.3).min(1.0);
-            state.grid[i].r = *dens - 1.0;
-            state.grid[i].g = b * 0.2;
-            state.grid[i].b = b;
-            state.grid[i].a = 1.0;
         } else {
-            state.grid[i].r = 0.0;
-            state.grid[i].g = 0.0;
-            state.grid[i].b = 0.0;
-            state.grid[i].a = 1.0;
+            let bad_vel =
+                state.world.water.vel[i].x.is_nan() || state.world.water.vel[i].y.is_nan();
+            match state.view_mode {
+                MouseMode::Dens => {
+                    if dens.is_nan() || dens.is_infinite() {
+                        state.grid[i].r = 1.0;
+                        state.grid[i].g = 0.2;
+                        state.grid[i].b = 0.0;
+                        state.grid[i].a = 1.0;
+                    } else if bad_vel {
+                        state.grid[i].r = 1.0;
+                        state.grid[i].g = 0.8;
+                        state.grid[i].b = 0.0;
+                        state.grid[i].a = 1.0;
+                    } else if *dens > 0.0 {
+                        let b = (*dens * 0.7 + 0.3).min(1.0);
+                        state.grid[i].r = *dens - 1.0;
+                        state.grid[i].g = b * 0.2;
+                        state.grid[i].b = b;
+                        state.grid[i].a = 1.0;
+                    }
+                }
+                MouseMode::Vel => {
+
+                }
+            }
         }
     }
 
@@ -94,7 +104,7 @@ pub fn handle_water(
     if let Some(pos) = cursor_grid_pos {
         let i = pos.index(state.world.size().x);
         if input.mouse_pressed(MouseButton::Left) {
-            state.world.water.dens[i] += 4.0 * t_delta.as_secs_f32();
+            state.world.water.dens[i] += 100.0 * t_delta.as_secs_f32();
         }
         if input.mouse_pressed(MouseButton::Right) {
             state.world.water.dens[i] = 0.0;
@@ -119,6 +129,9 @@ pub fn handle_water(
         }
         if input.pressed(Key::B) {
             state.world.water.barrier[i] = true;
+        }
+        if input.pressed(Key::X) {
+            state.world.water.barrier[i] = false;
         }
     }
 }

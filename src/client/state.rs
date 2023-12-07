@@ -5,7 +5,7 @@ use super::{camera::Camera, render::tile::TileInstance};
 pub struct ClientState {
     pub camera: Camera,
     pub camera_scroll: f32,
-    pub mouse_mode: MouseMode,
+    pub view_mode: MouseMode,
     pub grid: Vec<TileInstance>,
     pub width: u32,
     pub world: World,
@@ -18,7 +18,7 @@ impl ClientState {
         Self {
             camera: Camera::default(),
             camera_scroll: 0.0,
-            mouse_mode: MouseMode::Dens,
+            view_mode: MouseMode::Dens,
             grid: vec![TileInstance {
                 r: 0.0,
                 g: 0.0,
