@@ -1,4 +1,4 @@
 mod smoke;
-pub mod water;
+pub mod liquid;
 mod world;
 pub use world::*;

@@ -9,6 +9,7 @@ pub struct ClientState {
     pub grid: Vec<TileInstance>,
     pub width: u32,
     pub world: World,
+    pub running: bool,
 }
 
 impl ClientState {
@@ -26,6 +27,7 @@ impl ClientState {
             }; world.size().area()],
             width: world.size().x as u32,
             world,
+            running: true,
         }
     }
 }

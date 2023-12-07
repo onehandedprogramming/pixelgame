@@ -1,10 +1,4 @@
-use crate::world::water::C;
-
-use super::{
-    input::Input,
-    render::{tile::TileInstance, Renderer},
-    ClientState, MouseMode,
-};
+use super::{input::Input, render::Renderer, ClientState, MouseMode};
 use std::time::Duration;
 use winit::event::{MouseButton, VirtualKeyCode as Key};
 
@@ -46,18 +40,39 @@ pub fn update(
 
     handle_water(state, input, renderer, t_delta);
 
-    state.world.update(t_delta);
+    if state.running || input.just_pressed(Key::N) {
+        state.world.update(t_delta);
+    }
+    if input.just_pressed(Key::Space) {
+        state.running = !state.running;
+    }
 
-    for (i, dens) in state.world.water.rho.iter().enumerate() {
+    for (i, dens) in state.world.water.dens.iter().enumerate() {
         if state.world.water.barrier[i] {
             state.grid[i].r = 1.0;
             state.grid[i].g = 1.0;
             state.grid[i].b = 1.0;
             state.grid[i].a = 1.0;
-        } else {
+        } else if dens.is_nan() || dens.is_infinite() {
+            state.grid[i].r = 1.0;
+            state.grid[i].g = 0.2;
+            state.grid[i].b = 0.0;
+            state.grid[i].a = 1.0;
+        } else if state.world.water.vel[i].x.is_nan() {
+            state.grid[i].r = 1.0;
+            state.grid[i].g = 0.8;
+            state.grid[i].b = 0.0;
+            state.grid[i].a = 1.0;
+        } else if *dens > 0.0 {
+            let b = (*dens * 0.7 + 0.3).min(1.0);
             state.grid[i].r = *dens - 1.0;
+            state.grid[i].g = b * 0.2;
+            state.grid[i].b = b;
+            state.grid[i].a = 1.0;
+        } else {
+            state.grid[i].r = 0.0;
             state.grid[i].g = 0.0;
-            state.grid[i].b = *dens;
+            state.grid[i].b = 0.0;
             state.grid[i].a = 1.0;
         }
     }
@@ -79,10 +94,10 @@ pub fn handle_water(
     if let Some(pos) = cursor_grid_pos {
         let i = pos.index(state.world.size().x);
         if input.mouse_pressed(MouseButton::Left) {
-            state.world.water.lat[C][i] += 4.0 * t_delta.as_secs_f32();
+            state.world.water.dens[i] += 4.0 * t_delta.as_secs_f32();
         }
         if input.mouse_pressed(MouseButton::Right) {
-            state.world.water.lat[C][i] = 0.0;
+            state.world.water.dens[i] = 0.0;
         }
         if input.pressed(Key::Left) {
             state.world.water.vel[i].x -= 1.0 * t_delta.as_secs_f32();
@@ -97,7 +112,10 @@ pub fn handle_water(
             state.world.water.vel[i].y -= 1.0 * t_delta.as_secs_f32();
         }
         if input.just_pressed(Key::T) {
-            println!("{}, {:?}", state.world.water.rho[i], state.world.water.vel[i])
+            println!(
+                "{} @ {:?} going {:?}",
+                state.world.water.dens[i], state.world.water.pos[i], state.world.water.vel[i]
+            )
         }
         if input.pressed(Key::B) {
             state.world.water.barrier[i] = true;
