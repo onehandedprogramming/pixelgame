@@ -1,13 +1,12 @@
-use std::time::Duration;
-
-use crate::util::point::Point;
+use crate::world::water::C;
 
 use super::{
     input::Input,
     render::{tile::TileInstance, Renderer},
     ClientState, MouseMode,
 };
-use winit::event::VirtualKeyCode as Key;
+use std::time::Duration;
+use winit::event::{MouseButton, VirtualKeyCode as Key};
 
 pub fn update(
     state: &mut ClientState,
@@ -15,14 +14,6 @@ pub fn update(
     renderer: &Renderer,
     t_delta: &Duration,
 ) -> bool {
-    let cursor_pos = state
-        .camera
-        .cursor_world_pos(input.mouse_pixel_pos, &renderer.window.inner_size());
-    let cursor_grid_pos = cursor_pos.to_grid(Point {
-        x: state.world.width() as u32,
-        y: state.world.width() as u32,
-    });
-
     if input.just_pressed(Key::Escape) {
         return true;
     }
@@ -53,85 +44,63 @@ pub fn update(
         }
     }
 
-    if input.mouse_pressed(winit::event::MouseButton::Left) {
-        if let Some(pos) = cursor_grid_pos {
-            let i = pos.index(state.world.width() as u32) as usize;
-            state.world.dens[i] += 1.0 * t_delta.as_secs_f32();
-        }
-    }
-    if input.mouse_pressed(winit::event::MouseButton::Right) {
-        if let Some(pos) = cursor_grid_pos {
-            let i = pos.index(state.world.width() as u32) as usize;
-            state.world.dens[i] = 0.0;
-        }
-    }
-    if input.just_pressed(Key::Left) {
-        if let Some(pos) = cursor_grid_pos {
-            let i = pos.index(state.world.width() as u32) as usize;
-            state.world.vx[i] = -1.0;
-            state.world.vy[i] = 0.0;
-            state.world.dens[i] += 5.0 * t_delta.as_secs_f32();
-        }
-    }
-    if input.just_pressed(Key::Right) {
-        if let Some(pos) = cursor_grid_pos {
-            let i = pos.index(state.world.width() as u32) as usize;
-            state.world.vx[i] = 1.0;
-            state.world.vy[i] = 0.0;
-            state.world.dens[i] += 5.0 * t_delta.as_secs_f32();
-        }
-    }
-    if input.just_pressed(Key::Up) {
-        if let Some(pos) = cursor_grid_pos {
-            let i = pos.index(state.world.width() as u32) as usize;
-            state.world.vy[i] = 1.0;
-            state.world.vx[i] = 0.0;
-            state.world.dens[i] += 5.0 * t_delta.as_secs_f32();
-        }
-    }
-    if input.just_pressed(Key::Down) {
-        if let Some(pos) = cursor_grid_pos {
-            let i = pos.index(state.world.width() as u32) as usize;
-            state.world.vy[i] = -1.0;
-            state.world.vx[i] = 0.0;
-            state.world.dens[i] += 5.0 * t_delta.as_secs_f32();
-        }
-    }
-    if input.mouse_pressed(winit::event::MouseButton::Right) {
-        if let Some(pos) = cursor_grid_pos {
-            let i = pos.index(state.world.width() as u32) as usize;
-            state.world.vx[i] = 0.0;
-            state.world.vy[i] = 0.0;
-            state.world.u_prev[i] = 0.0;
-            state.world.v_prev[i] = 0.0;
-        }
-    }
+    handle_water(state, input, renderer, t_delta);
 
-    if input.just_pressed(Key::T) {
-        println!("{}", state.world.dens.iter().sum::<f32>());
-    }
+    state.world.update(t_delta);
 
-    state.world.update(t_delta.as_secs_f32());
-    for (i, dens) in state.world.dens.iter().enumerate() {
-        match state.mouse_mode {
-            MouseMode::Dens => {
-                state.grid[i] = TileInstance {
-                    r: 0.0,
-                    g: 0.0,
-                    b: *dens,
-                    a: 0.0,
-                }
-            }
-            MouseMode::Vel => {
-                state.grid[i] = TileInstance {
-                    r: state.world.vx[i],
-                    g: state.world.vy[i],
-                    b: -state.world.vx[i],
-                    a: 0.0,
-                }
-            }
+    for (i, dens) in state.world.water.rho.iter().enumerate() {
+        if state.world.water.barrier[i] {
+            state.grid[i].r = 1.0;
+            state.grid[i].g = 1.0;
+            state.grid[i].b = 1.0;
+            state.grid[i].a = 1.0;
+        } else {
+            state.grid[i].r = *dens - 1.0;
+            state.grid[i].g = 0.0;
+            state.grid[i].b = *dens;
+            state.grid[i].a = 1.0;
         }
     }
 
     false
+}
+
+pub fn handle_water(
+    state: &mut ClientState,
+    input: &Input,
+    renderer: &Renderer,
+    t_delta: &Duration,
+) {
+    let cursor_pos = state
+        .camera
+        .cursor_world_pos(input.mouse_pixel_pos, &renderer.window.inner_size());
+    let cursor_grid_pos = cursor_pos.to_grid(state.world.size());
+
+    if let Some(pos) = cursor_grid_pos {
+        let i = pos.index(state.world.size().x);
+        if input.mouse_pressed(MouseButton::Left) {
+            state.world.water.lat[C][i] += 4.0 * t_delta.as_secs_f32();
+        }
+        if input.mouse_pressed(MouseButton::Right) {
+            state.world.water.lat[C][i] = 0.0;
+        }
+        if input.pressed(Key::Left) {
+            state.world.water.vel[i].x -= 1.0 * t_delta.as_secs_f32();
+        }
+        if input.pressed(Key::Right) {
+            state.world.water.vel[i].x += 1.0 * t_delta.as_secs_f32();
+        }
+        if input.pressed(Key::Up) {
+            state.world.water.vel[i].y += 1.0 * t_delta.as_secs_f32();
+        }
+        if input.pressed(Key::Down) {
+            state.world.water.vel[i].y -= 1.0 * t_delta.as_secs_f32();
+        }
+        if input.just_pressed(Key::T) {
+            println!("{}, {:?}", state.world.water.rho[i], state.world.water.vel[i])
+        }
+        if input.pressed(Key::B) {
+            state.world.water.barrier[i] = true;
+        }
+    }
 }

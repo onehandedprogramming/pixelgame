@@ -1,11 +1,11 @@
-use crate::{util::point::Point, client::render::{uniform::UniformData, RenderUpdateData}};
+use crate::{util::vector::Vec2, client::render::{uniform::UniformData, RenderUpdateData}};
 
 #[repr(C)]
 #[repr(align(16))]
 #[derive(Clone, Copy, PartialEq, bytemuck::Zeroable)]
 pub struct TileView {
-    pub pos: Point<f32>,
-    pub proj: Point<f32>,
+    pub pos: Vec2<f32>,
+    pub proj: Vec2<f32>,
     pub width: u32,
 }
 
@@ -29,7 +29,7 @@ impl UniformData for TileView {
 
 impl Default for TileView {
     fn default() -> Self {
-        Self { pos: Point::zero(), proj: Point::zero(), width: 0 }
+        Self { pos: Vec2::zero(), proj: Vec2::zero(), width: 0 }
     }
 }
 

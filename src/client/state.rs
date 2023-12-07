@@ -1,12 +1,14 @@
-use super::{camera::Camera, render::tile::TileInstance, world::World};
+use crate::world::World;
+
+use super::{camera::Camera, render::tile::TileInstance};
 
 pub struct ClientState {
     pub camera: Camera,
     pub camera_scroll: f32,
     pub mouse_mode: MouseMode,
     pub grid: Vec<TileInstance>,
-    pub world: World,
     pub width: u32,
+    pub world: World,
 }
 
 impl ClientState {
@@ -21,8 +23,8 @@ impl ClientState {
                 g: 0.0,
                 b: 0.0,
                 a: 0.0,
-            }; world.vx.len()],
-            width: world.width() as u32,
+            }; world.size().area()],
+            width: world.size().x as u32,
             world,
         }
     }

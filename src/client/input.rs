@@ -2,11 +2,11 @@ use std::collections::HashSet;
 
 use winit::event::{ElementState, MouseScrollDelta, VirtualKeyCode, WindowEvent, MouseButton};
 
-use crate::util::point::Point;
+use crate::util::vector::Vec2;
 
 pub struct Input {
-    pub mouse_pixel_pos: Point<f32>,
-    pub mouse_delta: Point<f32>,
+    pub mouse_pixel_pos: Vec2<f32>,
+    pub mouse_delta: Vec2<f32>,
 
     pressed: HashSet<VirtualKeyCode>,
     just_pressed: HashSet<VirtualKeyCode>,
@@ -21,8 +21,8 @@ pub struct Input {
 impl Input {
     pub fn new() -> Self {
         Self {
-            mouse_pixel_pos: Point::zero(),
-            mouse_delta: Point::zero(),
+            mouse_pixel_pos: Vec2::zero(),
+            mouse_delta: Vec2::zero(),
             pressed: HashSet::new(),
             just_pressed: HashSet::new(),
             mouse_pressed: HashSet::new(),
@@ -57,7 +57,7 @@ impl Input {
                 self.mouse_pressed.clear();
             }
             WindowEvent::CursorMoved { position, .. } => {
-                let new = Point::new(position.x as f32, position.y as f32);
+                let new = Vec2::new(position.x as f32, position.y as f32);
                 self.mouse_delta = new - self.mouse_pixel_pos;
                 self.mouse_pixel_pos = new;
             }

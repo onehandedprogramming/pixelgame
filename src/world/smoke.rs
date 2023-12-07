@@ -1,6 +1,5 @@
-const THE_N: usize = 100;
-const SIZE: usize = (THE_N + 2) * (THE_N + 2);
-pub struct World {
+pub struct SmokeGrid {
+    inner_size: usize,
     pub vx: Vec<f32>,
     pub vy: Vec<f32>,
     pub dens: Vec<f32>,
@@ -9,21 +8,23 @@ pub struct World {
     pub dens_prev: Vec<f32>,
 }
 
-impl World {
-    pub fn new() -> Self {
+impl SmokeGrid {
+    pub fn new(size: usize) -> Self {
+        let area = size * size;
         Self {
-            vx: vec![0.0; SIZE],
-            vy: vec![0.0; SIZE],
-            dens: vec![0.0; SIZE],
-            u_prev: vec![0.0; SIZE],
-            v_prev: vec![0.0; SIZE],
-            dens_prev: vec![0.0; SIZE],
+            inner_size: size - 2,
+            vx: vec![0.0; area],
+            vy: vec![0.0; area],
+            dens: vec![0.0; area],
+            u_prev: vec![0.0; area],
+            v_prev: vec![0.0; area],
+            dens_prev: vec![0.0; area],
         }
     }
 
     pub fn update(&mut self, dt: f32) {
         vel_step(
-            THE_N,
+            self.inner_size,
             &mut self.vx,
             &mut self.vy,
             &mut self.u_prev,
@@ -32,7 +33,7 @@ impl World {
             dt,
         );
         dens_step(
-            THE_N,
+            self.inner_size,
             &mut self.dens,
             &mut self.dens_prev,
             &mut self.vx,
@@ -41,20 +42,16 @@ impl World {
             dt,
         );
     }
-
-    pub fn width(&self) -> usize {
-        return THE_N + 2;
-    }
 }
 
-fn add_source(n: usize, x: &mut [f32], s: &mut [f32], dt: f32) {
-    for i in 0..(n + 2) * (n + 2) {
+fn add_source(x: &mut [f32], s: &mut [f32], dt: f32) {
+    for i in 0..x.len() {
         x[i] += dt * s[i];
     }
 }
 
 fn ix(i: usize, j: usize) -> usize {
-    i + (THE_N + 2) * j
+    i + 100 * j
 }
 
 fn diffuse(n: usize, b: i32, x: &mut [f32], x0: &[f32], diff: f32, dt: f32) {
@@ -82,10 +79,6 @@ fn set_bnd(n: usize, b: i32, x: &mut [f32]) {
     x[ix(0, n + 1)] = 0.5 * (x[ix(1, n + 1)] + x[ix(0, n)]);
     x[ix(n + 1, 0)] = 0.5 * (x[ix(n, 0)] + x[ix(n + 1, 1)]);
     x[ix(n + 1, n + 1)] = 0.5 * (x[ix(n, n + 1)] + x[ix(n + 1, n)]);
-}
-
-fn lerp(a: f32, b: f32, k: f32) -> f32 {
-    a + (k * (b - a))
 }
 
 fn advect(n: usize, b: i32, d: &mut [f32], d0: &[f32], vx: &[f32], vy: &[f32], dt: f32) {
@@ -120,14 +113,8 @@ fn advect(n: usize, b: i32, d: &mut [f32], d0: &[f32], vx: &[f32], vy: &[f32], d
             let t1 = y - j0 as f32;
             let t0 = 1.0 - t1;
 
-            let prev = d[ix(i, j)];
-            let v0 = s0 * t0 * d0[ix(i0, j0)];
-            let v1 = s0 * t1 * d0[ix(i0, j1)];
-            let v2 = s1 * t0 * d0[ix(i1, j0)];
-            let v3 = s1 * t1 * d0[ix(i1, j1)];
             d[ix(i, j)] = s0 * (t0 * d0[ix(i0, j0)] + t1 * d0[ix(i0, j1)])
                 + s1 * (t0 * d0[ix(i1, j0)] + t1 * d0[ix(i1, j1)]);
-            // println!("diff={}", d[ix(i, j)] - prev);
         }
     }
     set_bnd(n, b, d);
@@ -157,8 +144,8 @@ fn vel_step(
     visc: f32,
     dt: f32,
 ) {
-    add_source(n, vx, vx0, dt);
-    add_source(n, vy, vy0, dt);
+    add_source(vx, vx0, dt);
+    add_source(vy, vy0, dt);
     std::mem::swap(vx0, vx);
     std::mem::swap(vy0, vy);
     diffuse(n, 1, vx, vx0, visc, dt);
