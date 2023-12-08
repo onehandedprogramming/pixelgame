@@ -47,19 +47,19 @@ pub fn update(
         state.running = !state.running;
     }
 
-    for (i, dens) in state.world.water.dens.iter().enumerate() {
+    for (i, dens) in state.world.liquid.dens.iter().enumerate() {
         state.grid[i].r = 0.0;
         state.grid[i].g = 0.0;
         state.grid[i].b = 0.0;
         state.grid[i].a = 1.0;
-        if state.world.water.barrier[i] {
+        if state.world.liquid.barrier[i] {
             state.grid[i].r = 1.0;
             state.grid[i].g = 1.0;
             state.grid[i].b = 1.0;
             state.grid[i].a = 1.0;
         } else {
             let bad_vel =
-                state.world.water.vel[i].x.is_nan() || state.world.water.vel[i].y.is_nan();
+                state.world.liquid.vel[i].x.is_nan() || state.world.liquid.vel[i].y.is_nan();
             match state.view_mode {
                 MouseMode::Dens => {
                     if dens.is_nan() || dens.is_infinite() {
@@ -81,7 +81,15 @@ pub fn update(
                     }
                 }
                 MouseMode::Vel => {
-
+                    let vel = state.world.liquid.vel[i];
+                    let px = vel.x.clamp(0.0, 1.0) * 2.0;
+                    let py = vel.y.clamp(0.0, 1.0) * 2.0;
+                    let nx = -vel.x.clamp(-1.0, 0.0) * 2.0;
+                    let ny = -vel.y.clamp(-1.0, 0.0) / 5.0;
+                    state.grid[i].r = px * 0.7 + py * 0.3;
+                    state.grid[i].g = nx * 0.5 + py * 0.5;
+                    state.grid[i].b = ny * 0.7 + nx * 0.3;
+                    state.grid[i].a = 1.0;
                 }
             }
         }
@@ -104,34 +112,34 @@ pub fn handle_water(
     if let Some(pos) = cursor_grid_pos {
         let i = pos.index(state.world.size().x);
         if input.mouse_pressed(MouseButton::Left) {
-            state.world.water.dens[i] += 100.0 * t_delta.as_secs_f32();
+            state.world.liquid.dens[i] += 100.0 * t_delta.as_secs_f32();
         }
         if input.mouse_pressed(MouseButton::Right) {
-            state.world.water.dens[i] = 0.0;
+            state.world.liquid.dens[i] = 0.0;
         }
         if input.pressed(Key::Left) {
-            state.world.water.vel[i].x -= 1.0 * t_delta.as_secs_f32();
+            state.world.liquid.vel[i].x -= 1.0 * t_delta.as_secs_f32();
         }
         if input.pressed(Key::Right) {
-            state.world.water.vel[i].x += 1.0 * t_delta.as_secs_f32();
+            state.world.liquid.vel[i].x += 1.0 * t_delta.as_secs_f32();
         }
         if input.pressed(Key::Up) {
-            state.world.water.vel[i].y += 1.0 * t_delta.as_secs_f32();
+            state.world.liquid.vel[i].y += 1.0 * t_delta.as_secs_f32();
         }
         if input.pressed(Key::Down) {
-            state.world.water.vel[i].y -= 1.0 * t_delta.as_secs_f32();
+            state.world.liquid.vel[i].y -= 1.0 * t_delta.as_secs_f32();
         }
         if input.just_pressed(Key::T) {
             println!(
                 "{} @ {:?} going {:?}",
-                state.world.water.dens[i], state.world.water.pos[i], state.world.water.vel[i]
+                state.world.liquid.dens[i], state.world.liquid.pos[i], state.world.liquid.vel[i]
             )
         }
         if input.pressed(Key::B) {
-            state.world.water.barrier[i] = true;
+            state.world.liquid.barrier[i] = true;
         }
         if input.pressed(Key::X) {
-            state.world.water.barrier[i] = false;
+            state.world.liquid.barrier[i] = false;
         }
     }
 }
