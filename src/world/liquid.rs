@@ -56,7 +56,7 @@ impl LiquidGrid {
                     vw[i] = Vec2::zero();
                     continue;
                 }
-                let mut pressure = (den - 0.2).max(0.0);
+                let mut pressure = (den - 0.3).max(0.0);
                 let mut vel = vr[i];
                 let mut pos = pr[i];
                 pos.x = pos.x.clamp(-0.5, 0.5);
@@ -66,12 +66,15 @@ impl LiquidGrid {
                 new_pos.x = new_pos.x.clamp(-1.49, 1.49);
                 new_pos.y = new_pos.y.clamp(-1.49, 1.49);
                 let mut change = new_pos - pos;
+
+                // account for barriers
+
                 // TODO i32 to isize
-                let ipos: Vec2<i32> = (pos + change + 0.5).floor().into();
-                if ipos.x != 0 || ipos.y != 0 {
-                    let ix = (i as i32 + ipos.x) as usize;
-                    let iy = (i as i32 + ipos.y * self.size.x as i32) as usize;
-                    let i2 = (iy as i32 + ipos.x) as usize;
+                let dir: Vec2<i32> = (pos + change + 0.5).floor().into();
+                if dir.x != 0 || dir.y != 0 {
+                    let ix = (i as i32 + dir.x) as usize;
+                    let iy = (i as i32 + dir.y * self.size.x as i32) as usize;
+                    let i2 = (iy as i32 + dir.x) as usize;
                     if self.barrier[i2] || self.barrier[ix] || self.barrier[iy] {
                         let mut mult = Vec2 {
                             x: (!self.barrier[ix]) as i32 as f32,
@@ -86,6 +89,8 @@ impl LiquidGrid {
                     }
                 }
 
+                // expand
+
                 if pressure > 0.0 {
                     let mut moved = 0.0;
                     for (dirs, mult) in [
@@ -94,30 +99,41 @@ impl LiquidGrid {
                     ] {
                         for dir in dirs {
                             let i2 = (i as i32 + dir.x + dir.y * self.size.x as i32) as usize;
+                            if dir.x.abs() == 1 && dir.y.abs() == 1 {
+                                let ix = (i as i32 + dir.x) as usize;
+                                let iy = (i as i32 + dir.y * self.size.x as i32) as usize;
+                                if self.barrier[ix] && self.barrier[iy] {
+                                    continue;
+                                }
+                            }
                             if !self.barrier[i2] && dr[i2] < den {
                                 let change = (mult * (den - dr[i2])).min(den * mult) * dt * 100.0;
-                                dm[i2] += change;
+                                if change != 0.0 {
+                                    dm[i2] += change;
 
-                                let fdir: Vec2<f32> = dir.into();
-                                let fdir = fdir * 0.5;
-                                let sum = change + dr[i2];
-                                vm[i2] += (fdir * change + vr[i2] * dr[i2]) / sum - vr[i2];
+                                    let fdir: Vec2<f32> = dir.into();
+                                    let fdir = fdir * 0.5;
+                                    let sum = change + dr[i2];
+                                    vm[i2] += (fdir * change + vr[i2] * dr[i2]) / sum - vr[i2];
 
-                                moved += change;
+                                    moved += change;
+                                }
                             }
                         }
                     }
                     den -= moved;
                 }
 
+                // move
+
                 pos += change;
-                let ipos: Vec2<i32> = (pos + 0.5).floor().into();
-                if ipos.x != 0 || ipos.y != 0 {
-                    let i2 = (i as i32 + ipos.x + ipos.y * self.size.x as i32) as usize;
+                let dir: Vec2<i32> = (pos + 0.5).floor().into();
+                if dir.x != 0 || dir.y != 0 {
+                    let i2 = (i as i32 + dir.x + dir.y * self.size.x as i32) as usize;
                     let move_den = (den + vel.mag() * 0.1 - dr[i2] * 2.0).max(0.0).min(den);
                     if move_den > 0.0 {
                         let sum = move_den + dr[i2];
-                        let mov: Vec2<f32> = ipos.into();
+                        let mov: Vec2<f32> = dir.into();
                         let new_pos = pos - mov;
                         pm[i2] += (new_pos * move_den + pr[i2] * dr[i2]) / sum - pr[i2];
                         vm[i2] += (vel * move_den + vr[i2] * dr[i2]) / sum - vr[i2];
