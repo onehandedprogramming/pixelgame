@@ -41,6 +41,19 @@ pub fn update(
     handle_water(state, input, renderer, t_delta);
 
     if state.running || input.just_pressed(Key::N) {
+        if !input.pressed(Key::G) {
+            for (d, v) in state
+                .world
+                .liquid
+                .dens
+                .iter()
+                .zip(state.world.liquid.vel.iter_mut())
+            {
+                if *d > 0.0 {
+                    v.y -= 100.0 * t_delta.as_secs_f32();
+                }
+            }
+        }
         state.world.update(t_delta);
     }
     if input.just_pressed(Key::Space) {
