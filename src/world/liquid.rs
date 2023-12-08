@@ -107,7 +107,7 @@ impl LiquidGrid {
                                 }
                             }
                             if !self.barrier[i2] && dr[i2] < den {
-                                let change = (mult * (den - dr[i2])).min(den * mult) * dt * 100.0;
+                                let change = (mult * (den - dr[i2]) * dt * 200.0).min(den * mult);
                                 if change != 0.0 {
                                     dm[i2] += change;
 
