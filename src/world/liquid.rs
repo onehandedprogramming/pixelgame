@@ -107,12 +107,12 @@ impl LiquidGrid {
                                 }
                             }
                             if !self.barrier[i2] && dr[i2] < den {
-                                let change = (mult * (den - dr[i2]) * dt * 200.0).min(den * mult);
-                                if change != 0.0 {
+                                let change = (mult * (den - dr[i2]) * dt * 100.0).min(den * mult);
+                                if change > 0.0 {
                                     dm[i2] += change;
 
                                     let fdir: Vec2<f32> = dir.into();
-                                    let fdir = fdir * 0.5;
+                                    let fdir = fdir * 1.0;
                                     let sum = change + dr[i2];
                                     vm[i2] += (fdir * change + vr[i2] * dr[i2]) / sum - vr[i2];
 
@@ -140,11 +140,34 @@ impl LiquidGrid {
                         dm[i2] += move_den;
 
                         den -= move_den;
-                        pos = Vec2::zero();
-                        vel = Vec2::zero();
-                    } else {
-                        pos = Vec2::zero();
                     }
+                    if den / move_den > 0.5 {
+                        let dirs = if dir.x == 0 {
+                            [dir + Vec2 { x: 1, y: 0 }, dir + Vec2 { x: -1, y: 0 }]
+                        } else if dir.y == 0 {
+                            [dir + Vec2 { x: 0, y: 1 }, dir + Vec2 { x: 0, y: -1 }]
+                        } else {
+                            [Vec2 { x: dir.x, y: 0 }, dir + Vec2 { x: 0, y: dir.y }]
+                        };
+                        let mut moved = 0.0;
+                        for dir2 in dirs {
+                            let i2 = (i as i32 + dir2.x + dir2.y * self.size.x as i32) as usize;
+                            let move_den = (den + vel.mag() * 0.1 - dr[i2] * 2.0).max(0.0).min(den) / 2.0;
+                            if move_den > 0.0 && !self.barrier[i2] {
+                                let sum = move_den + dr[i2];
+                                let mov: Vec2<f32> = dir2.into();
+                                let new_pos = pos - mov;
+                                pm[i2] += (new_pos * move_den + pr[i2] * dr[i2]) / sum - pr[i2];
+                                vm[i2] += (vel * move_den + vr[i2] * dr[i2]) / sum - vr[i2];
+                                dm[i2] += move_den;
+
+                                moved += move_den;
+                            }
+                        }
+                        den -= moved;
+                    }
+                    pos = Vec2::zero();
+                    vel = Vec2::zero();
                 }
                 pw[i] = pos;
                 dw[i] = den;
