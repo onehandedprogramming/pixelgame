@@ -99,6 +99,9 @@ impl<T: Add<Output = T> + Mul<Output = T> + Copy> Vec2<T> {
     pub fn index(&self, width: T) -> T {
         self.y * width + self.x
     }
+    pub fn dot(&self, other: Self) -> T {
+        self.x * other.x + self.y * other.y
+    }
 }
 
 impl Vec2<i32> {
