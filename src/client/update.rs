@@ -98,7 +98,7 @@ pub fn update(
                     let px = vel.x.clamp(0.0, 1.0) * 2.0;
                     let py = vel.y.clamp(0.0, 1.0) * 2.0;
                     let nx = -vel.x.clamp(-1.0, 0.0) * 2.0;
-                    let ny = -vel.y.clamp(-1.0, 0.0) / 5.0;
+                    let ny = -vel.y.clamp(-1.0, 0.0);
                     state.grid[i].r = px * 0.7 + py * 0.3;
                     state.grid[i].g = nx * 0.5 + py * 0.5;
                     state.grid[i].b = ny * 0.7 + nx * 0.3;
