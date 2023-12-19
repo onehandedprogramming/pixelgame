@@ -1,8 +1,8 @@
 use super::swap_buffer::SwapBuffer;
 use rand::Rng;
 
-pub const W: usize = 1000;
-pub const H: usize = 1000;
+pub const W: usize = 100;
+pub const H: usize = 100;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ElementType {
@@ -14,9 +14,9 @@ pub enum ElementType {
 
 #[derive(Clone, Copy, Debug)]
 pub struct ElementColor {
-    r: f32,
-    g: f32,
-    b: f32,
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -25,6 +25,7 @@ pub struct Cell {
     pub color: ElementColor,
     pub heat: f32,
     pub moisture: f32,
+    pub mass: f32,
 }
 
 impl Cell {
@@ -43,12 +44,11 @@ pub struct World {
 
 impl World {
     pub fn new() -> World {
-        let mut rng = rand::thread_rng(); // Create a random number generator
+        let mut rng = rand::thread_rng();
 
         let cells = (0..W * H)
             .map(|_| {
                 if rng.gen::<bool>() {
-                    // Randomly choose between Air and Sand
                     Cell {
                         element_type: ElementType::Water,
                         color: ElementColor {
@@ -58,10 +58,11 @@ impl World {
                         },
                         heat: 0.0,
                         moisture: 0.0,
+                        mass: 1.0,
                     }
                 } else {
                     Cell {
-                        element_type: ElementType::Air, // Assuming you have an Air variant in your Element enum
+                        element_type: ElementType::Air,
                         color: ElementColor {
                             r: 80.0 / 255.0,
                             g: 180.0 / 255.0,
@@ -69,6 +70,7 @@ impl World {
                         },
                         heat: 0.0,
                         moisture: 0.0,
+                        mass: 0.05,
                     }
                 }
             })
@@ -120,8 +122,7 @@ impl World {
                             let new_y = y as isize + dy;
 
                             if in_bounds(new_x, new_y)
-                                && er[new_y as usize * W + new_x as usize].element_type
-                                    == ElementType::Air
+                                && er[new_y as usize * W + new_x as usize].mass < cell.mass
                             {
                                 ew.swap(y * W + x, new_y as usize * W + new_x as usize);
                                 break;
@@ -150,8 +151,7 @@ impl World {
                         let new_y = y as isize + dy;
 
                         if in_bounds(new_x, new_y)
-                            && er[new_y as usize * W + new_x as usize].element_type
-                                == ElementType::Air
+                            && er[new_y as usize * W + new_x as usize].mass < cell.mass
                         {
                             ew.swap(y * W + x, new_y as usize * W + new_x as usize);
                             moved = true;

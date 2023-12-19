@@ -1,6 +1,9 @@
-use std::time::Duration;
+use std::{time::Duration};
 
-use crate::{client::world::W, util::point::Point};
+use crate::{
+    client::world::{ElementType, W, Cell, ElementColor},
+    util::point::Point,
+};
 
 use super::{
     input::Input,
@@ -53,12 +56,22 @@ pub fn update(
         }
     }
 
-    // if input.mouse_pressed(winit::event::MouseButton::Left) {
-    //     if let Some(pos) = cursor_grid_pos {
-    //         let i = pos.index(state.world.width() as u32) as usize;
-    //         state.world.n0[i] += 1.0 * t_delta.as_secs_f32();
-    //     }
-    // }
+    if input.mouse_pressed(winit::event::MouseButton::Left) {
+        if let Some(pos) = cursor_grid_pos {
+            let i = pos.index(W as u32) as usize;
+            state.world.cells.r[i] = Cell {
+                element_type: ElementType::Sand,
+                color: ElementColor {
+                    r: 210.0 / 255.0,
+                    g: 190.0 / 255.0,
+                    b: 110.0 / 255.0,
+                },
+                heat: 0.0,
+                moisture: 0.0,
+                mass: 5.0,
+            };
+        }
+    }
     // if input.mouse_pressed(winit::event::MouseButton::Right) {
     //     if let Some(pos) = cursor_grid_pos {
     //         let i = pos.index(state.world.width() as u32) as usize;
@@ -113,7 +126,7 @@ pub fn update(
     }
 
     // if input.just_pressed(Key::C) {
-        state.world.update(t_delta.as_secs_f32());
+    state.world.update(t_delta.as_secs_f32());
     // }
 
     // if let Some(pos) = cursor_grid_pos {
