@@ -1,235 +1,205 @@
-use vek::*;
+use super::swap_buffer::SwapBuffer;
+use rand::Rng;
 
-pub const W: usize = 64;
-pub const H: usize = 64;
+pub const W: usize = 1000;
+pub const H: usize = 1000;
 
-#[derive(Copy, Clone)]
-struct Square {
-    p: Vec2<f32>,
-    a: f32
-}
-impl Square {
-    pub fn new(p0: Vec2<f32>, a0: f32) -> Self {
-        Square {p: p0, a: a0}
-    }
-
-    pub fn shift(&mut self, offset: Vec2<f32>) {
-        self.p += offset
-    }
-
-    pub fn grow(&mut self, amount: f32) {
-        self.a += amount;
-        self.p += Vec2::new(-0.5 * amount, -0.5 * amount);
-    }
-    
-    pub fn intersect_area(&self, other: &Self) -> f32 {
-        let x1 = self.p.x.max(other.p.x);
-        let y1 = self.p.y.max(other.p.y);
-        let x2 = (self.p.x + self.a).min(other.p.x + other.a);
-        let y2 = (self.p.y + self.a).min(other.p.y + other.a);
-        (x2 - x1).max(0.0) * (y2 - y1).max(0.0)
-    }
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ElementType {
+    Air,
+    Sand,
+    Water,
+    Fire,
 }
 
-#[derive(Copy, Clone)]
-struct Cell {
-    pop: f32,
-    vel: Vec2<f32>,
-    spread: f32,
-    conductivity: f32,
-
+#[derive(Clone, Copy, Debug)]
+pub struct ElementColor {
+    r: f32,
+    g: f32,
+    b: f32,
 }
+
+#[derive(Clone, Copy, Debug)]
+pub struct Cell {
+    pub element_type: ElementType,
+    pub color: ElementColor,
+    pub heat: f32,
+    pub moisture: f32,
+}
+
 impl Cell {
-    pub fn empty() -> Self {
-        Cell {
-            pop: 0.0,
-            vel: Vec2::zero(),
-            spread: 0.0,
-            conductivity: 1.0,
-        }
-    }
+    fn render(&self) -> u32 {
+        let r = (self.color.r * 255.0) as u32;
+        let g = (self.color.g * 255.0) as u32;
+        let b = (self.color.b * 255.0) as u32;
 
-    pub fn set(&mut self, population: f32, velocity: Vec2<f32>, spread_factor: f32) {
-        self.pop = population;
-        self.vel = velocity;
-        self.spread = spread_factor
-    }
-
-    pub fn clean(&mut self) {
-        self.pop = 0.0;
-    }
-    
-    #[inline(always)]
-    pub fn flow_factor(&self, vec: Vec2<f32>, other: &Self, delta: f32) -> f32 {
-        let pop_box = &mut Square::new(Vec2::zero(), 1.0);
-        pop_box.grow(self.spread * delta);
-        pop_box.shift(self.vel * delta);
-        other.conductivity * pop_box.intersect_area(&Square::new(vec, 1.0))
-    }
-    
-    #[inline(always)]
-    fn update_vel(&mut self, new_vel: Vec2<f32>, pop_flow: f32) {
-        if self.pop + pop_flow == 0.0 {
-            self.vel = Vec2::zero();
-            return
-        }
-        self.vel = (self.vel * self.pop + new_vel * pop_flow) / (self.pop + pop_flow)
-    }
-
-    #[inline(always)]
-    fn update_spread(&mut self, new_spread: f32, pop_flow: f32) {
-        if self.pop + pop_flow == 0.0 {
-            self.spread = 0.0;
-            return
-        }
-        self.spread = (self.spread * self.pop + new_spread * pop_flow) / (self.pop + pop_flow)
-    }
-
-    pub fn tick(&self, (this, left, right, up, down): (&mut Self, &mut Self, &mut Self, &mut Self, &mut Self), delta: f32) {
-        /* save some effort quite often
-        if self.pop == 0.0 {
-            return
-        }*/
-
-        let flow_factors = [
-            self.flow_factor(Vec2::zero(), this, delta),
-            self.flow_factor(Vec2::left(), left, delta),
-            self.flow_factor(Vec2::right(), right, delta),
-            self.flow_factor(Vec2::up(), up, delta),
-            self.flow_factor(Vec2::down(), down, delta),
-        ];
-        let flow_sum: f32 = (&flow_factors).iter().sum::<f32>();
-        
-        if flow_sum == 0.0 {
-            return
-        }
-        let flow_vals = [
-            self.pop * flow_factors[1] / flow_sum,
-            self.pop * flow_factors[2] / flow_sum,
-            self.pop * flow_factors[3] / flow_sum,
-            self.pop * flow_factors[4] / flow_sum,
-        ];
-        let val_sum: f32 = (&flow_vals).iter().sum::<f32>();
-
-        left.update_vel(self.vel, flow_vals[0]);
-        right.update_vel(self.vel, flow_vals[1]);
-        up.update_vel(self.vel, flow_vals[2]);
-        down.update_vel(self.vel, flow_vals[3]);
-        left.update_spread(self.spread, flow_vals[0]);
-        right.update_spread(self.spread, flow_vals[1]);
-        up.update_spread(self.spread, flow_vals[2]);
-        down.update_spread(self.spread, flow_vals[3]);
-
-        this.pop -= val_sum;
-        left.pop += flow_vals[0];
-        right.pop += flow_vals[1];
-        up.pop += flow_vals[2];
-        down.pop += flow_vals[3];
-
-        this.vel.x += (left.pop - self.pop).powf(3.0) * 0.000000001;
-        this.vel.x += (self.pop - right.pop).powf(3.0) * 0.000000001;
-        this.vel.y -= (up.pop - self.pop).powf(3.0) * 0.000000001;
-        this.vel.y -= (self.pop - down.pop).powf(3.0) * 0.000000001;
-    }
-
-    pub fn get_colour(&self) -> u32 {
-        ((((1.0 - self.conductivity) * 255.0) as u32).min(255) << 16) + ((self.pop as u32).min(255)) as u32
+        (r << 16) | (g << 8) | b
     }
 }
-
 
 pub struct World {
-    cells: Box<[[Cell; H]; W]>,
+    pub cells: SwapBuffer<Cell>,
 }
 
 impl World {
-    pub fn test(option: i32) -> Self {
-        let mut this = Self {
-            cells: Box::new([[Cell::empty(); H]; W]),
-        };
+    pub fn new() -> World {
+        let mut rng = rand::thread_rng(); // Create a random number generator
 
-        for i in 0..W {
-            for j in 0..H {
-                if
-                    (20 + i as i32 - W as i32 / 2).wrapping_pow(2) +
-                    (j as i32 - H as i32 / 2).wrapping_pow(2) < 100
-                {
-                    this.cells[i][j].set(250.0, Vec2::new(0.2, 0.1), 0.2);
+        let cells = (0..W * H)
+            .map(|_| {
+                if rng.gen::<bool>() {
+                    // Randomly choose between Air and Sand
+                    Cell {
+                        element_type: ElementType::Water,
+                        color: ElementColor {
+                            r: 10.0 / 255.0,
+                            g: 10.0 / 255.0,
+                            b: 255.0 / 255.0,
+                        },
+                        heat: 0.0,
+                        moisture: 0.0,
+                    }
+                } else {
+                    Cell {
+                        element_type: ElementType::Air, // Assuming you have an Air variant in your Element enum
+                        color: ElementColor {
+                            r: 80.0 / 255.0,
+                            g: 180.0 / 255.0,
+                            b: 210.0 / 255.0,
+                        },
+                        heat: 0.0,
+                        moisture: 0.0,
+                    }
                 }
-                if
-                    (-20 + i as i32 - W as i32 / 2).wrapping_pow(2) +
-                    (j as i32 - H as i32 / 2).wrapping_pow(2) < 100
-                {
-                    this.cells[i][j].set(250.0, Vec2::new(-0.2, 0.1), 0.2);
-                }
-            }
+            })
+            .collect::<Vec<Cell>>();
+
+        World {
+            cells: SwapBuffer::from_arr(cells, W),
         }
-
-        match option {
-            2 => for i in 24..W - 24 {
-                for j in 24..H - 24 {
-                    this.cells[i][j].conductivity = (j as f32) / (H as f32)
-                }
-            },
-            _ => {
-                for i in 24..W - 24 {
-                    this.cells[i][H / 3].conductivity = 0.0;
-                }
-                for i in 0..10 {
-                    this.cells[20 + i][H / 6].conductivity = 0.0;
-                    this.cells[W - 20 - i][H / 6].conductivity = 0.0;
-                }
-                for i in 0..W {
-                    this.cells[i][0].conductivity = 0.0;
-                    this.cells[i][0].pop = 400.0;
-                    this.cells[i][H - 1].conductivity = 0.0;
-                    this.cells[i][H - 1].pop = 400.0;
-                }
-                for j in 0..H {
-                    this.cells[0][j].conductivity = 0.0;
-                    this.cells[0][j].pop = 400.0;
-                    this.cells[W - 1][j].conductivity = 0.0;
-                    this.cells[W - 1][j].pop = 400.0;
-                }
-            },
-        };
-
-        this
     }
 
     pub fn update(&mut self, delta: f32) {
-        let mut new_cells = self.cells.clone();
-        for i in 1..W - 1 {
-            for j in 1..H - 1 {
-                let mut this = new_cells[i][j];
-                let mut left = new_cells[i - 1][j];
-                let mut right = new_cells[i + 1][j];
-                let mut up = new_cells[i][j - 1];
-                let mut down = new_cells[i][j + 1];
-                self.cells[i][j].tick((
-                    &mut this,
-                    &mut left,
-                    &mut right,
-                    &mut up,
-                    &mut down,
-                ), delta);
+        let er = &self.cells.r;
+        let ew = &mut self.cells.w;
 
-                new_cells[i][j] = this;
-                new_cells[i - 1][j] = left;
-                new_cells[i + 1][j] = right;
-                new_cells[i][j - 1] = up;
-                new_cells[i][j + 1] = down;
+        for x in 0..W {
+            for y in 0..H {
+                ew[y * W + x] = er[y * W + x];
             }
         }
 
-        self.cells = new_cells;
+        let mut rng = rand::thread_rng();
+
+        let (startx, endx, step) = if rng.gen::<bool>() {
+            (0 as i32,W as i32,1 as i32)
+        } else {
+            ((W-1) as i32,-1,-1)
+        };
+        let mut ix = startx;
+
+        while ix != endx {
+            let x = ix as usize;
+            for y in (0..H).rev() {
+                let cell = er[y * W + x];
+                if cell.element_type == ElementType::Sand {
+                    let cell = er[y * W + x];
+                    if cell.element_type == ElementType::Sand {
+                        let mut positions_to_check = vec![(0, -1)];
+
+                        if rng.gen() {
+                            positions_to_check.push((-1, -1));
+                            positions_to_check.push((1, -1));
+                        } else {
+                            positions_to_check.push((1, -1));
+                            positions_to_check.push((-1, -1));
+                        }
+
+                        for (dx, dy) in positions_to_check {
+                            let new_x = x as isize + dx;
+                            let new_y = y as isize + dy;
+
+                            if in_bounds(new_x, new_y)
+                                && er[new_y as usize * W + new_x as usize].element_type
+                                    == ElementType::Air
+                            {
+                                ew.swap(y * W + x, new_y as usize * W + new_x as usize);
+                                break;
+                            }
+                        }
+                    }
+                } else if cell.element_type == ElementType::Water {
+                    let mut rng = rand::thread_rng();
+                    let mut positions_to_check = vec![(0, -1)];
+
+                    if rng.gen() {
+                        positions_to_check.push((-1, -1));
+                        positions_to_check.push((1, -1));
+                    } else {
+                        positions_to_check.push((1, -1));
+                        positions_to_check.push((-1, -1));
+                    }
+
+                    // if x == 15 && y == 5 {
+                    //     println!("Below: {:?}", er[(y - 1) * W + x]);
+                    // }
+
+                    let mut moved = false;
+                    for (dx, dy) in positions_to_check {
+                        let new_x = x as isize + dx;
+                        let new_y = y as isize + dy;
+
+                        if in_bounds(new_x, new_y)
+                            && er[new_y as usize * W + new_x as usize].element_type
+                                == ElementType::Air
+                        {
+                            ew.swap(y * W + x, new_y as usize * W + new_x as usize);
+                            moved = true;
+                            break;
+                        }
+                    }
+                    if moved {
+                        continue;
+                    }
+
+                    let mut positions_to_check = vec![];
+                    if rng.gen() {
+                        positions_to_check.push((-1, 0));
+                        positions_to_check.push((1, 0));
+                    } else {
+                        positions_to_check.push((1, 0));
+                        positions_to_check.push((-1, 0));
+                    }
+
+                    for (dx, dy) in positions_to_check {
+                        let new_x = x as isize + dx;
+                        let new_y = y as isize + dy;
+
+                        if in_bounds(new_x, new_y)
+                            && er[new_y as usize * W + new_x as usize].element_type
+                                == ElementType::Air
+                        {
+                            ew.swap(y * W + x, new_y as usize * W + new_x as usize);
+                            break;
+                        }
+                    }
+                }
+            }
+            ix = ix as i32 + step;
+        }
+
+        self.cells.swap();
     }
 
     pub fn render_to(&self, buf: &mut [u32]) {
         for i in 0..W {
             for j in 0..H {
-                buf[j * W + i] = self.cells[i][j].get_colour();
+                buf[j * W + i] = self.cells.r[j * W + i].render();
             }
         }
     }
+}
+
+fn in_bounds(x: isize, y: isize) -> bool {
+    x >= 0 && x < W as isize && y >= 0 && y < H as isize
 }

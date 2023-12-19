@@ -11,7 +11,7 @@ pub struct ClientState {
 
 impl ClientState {
     pub fn new() -> Self {
-        let world = World::test(1);
+        let world = World::new();
         Self {
             camera: Camera::default(),
             camera_scroll: 0.0,

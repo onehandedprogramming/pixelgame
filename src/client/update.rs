@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::util::point::Point;
+use crate::{client::world::W, util::point::Point};
 
 use super::{
     input::Input,
@@ -18,10 +18,10 @@ pub fn update(
     let cursor_pos = state
         .camera
         .cursor_world_pos(input.mouse_pixel_pos, &renderer.window.inner_size());
-    // let cursor_grid_pos = cursor_pos.to_grid(Point {
-    //     x: state.world.width() as u32,
-    //     y: state.world.width() as u32,
-    // });
+    let cursor_grid_pos = cursor_pos.to_grid(Point {
+        x: W as u32,
+        y: W as u32,
+    });
 
     if input.just_pressed(Key::Escape) {
         return true;
@@ -101,16 +101,20 @@ pub fn update(
     //     }
     // }
 
-    // if input.just_pressed(Key::T) {
-    //     println!("all {}", state.world.rho.iter().sum::<f32>());
-    //     if let Some(pos) = cursor_grid_pos {
-    //         println!("cursor {}", state.world.rho[pos.index(state.world.width() as u32) as usize]);
-    //     }
-    // }
+    if input.just_pressed(Key::T) {
+        // println!("all {}", state.world.cells..sum::<f32>());
+        if let Some(pos) = cursor_grid_pos {
+            println!(
+                "cursor {:?}, pos: {:?}",
+                state.world.cells.r[pos.y as usize * W + pos.x as usize],
+                pos,
+            );
+        }
+    }
 
-    // // if input.just_pressed(Key::C) {
-    state.world.update(t_delta.as_secs_f32());
-    // // }
+    // if input.just_pressed(Key::C) {
+        state.world.update(t_delta.as_secs_f32());
+    // }
 
     // if let Some(pos) = cursor_grid_pos {
     //     if input.pressed(Key::B) {
@@ -126,22 +130,20 @@ pub fn update(
         let red = ((color >> 16) & 0xFF) as f32 / 255.0;
         let green = ((color >> 8) & 0xFF) as f32 / 255.0;
         let blue = (color & 0xFF) as f32 / 255.0;
-    
+
         (red, green, blue)
     }
-    
 
-    let mut buf = vec![0; super::world::H*super::world::W];
+    let mut buf = vec![0; super::world::H * super::world::W];
     state.world.render_to(&mut buf);
     for (i, col) in buf.iter().enumerate() {
         let color = convert_color(*col);
-        state.grid[i] = 
-            TileInstance {
-                r: color.0,
-                g: color.1,
-                b: color.2,
-                a: 1.0,
-            };
+        state.grid[i] = TileInstance {
+            r: color.0,
+            g: color.1,
+            b: color.2,
+            a: 1.0,
+        };
         // } else {
         //     match state.mouse_mode {
         //         MouseMode::Dens => TileInstance {
