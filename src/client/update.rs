@@ -1,7 +1,7 @@
 use std::{time::Duration};
 
 use crate::{
-    client::world::{ElementType, W, Cell, ElementColor},
+    client::world::{W, Element, ElementColor, Attribute},
     util::point::Point,
 };
 
@@ -59,8 +59,9 @@ pub fn update(
     if input.mouse_pressed(winit::event::MouseButton::Left) {
         if let Some(pos) = cursor_grid_pos {
             let i = pos.index(W as u32) as usize;
-            state.world.cells.r[i] = Cell {
-                element_type: ElementType::Sand,
+            state.world.cells.r[i] = Element {
+                name: "Sand".into(),
+                attributes: vec![Attribute::Fallable],
                 color: ElementColor {
                     r: 210.0 / 255.0,
                     g: 190.0 / 255.0,

@@ -5,11 +5,9 @@ pub const W: usize = 100;
 pub const H: usize = 100;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum ElementType {
-    Air,
-    Sand,
-    Water,
-    Fire,
+pub enum Attribute {
+    Fallable,
+    Liquid,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -19,16 +17,17 @@ pub struct ElementColor {
     pub b: f32,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct Cell {
-    pub element_type: ElementType,
+#[derive(Clone, Debug)]
+pub struct Element {
+    pub name: Box<str>,
+    pub attributes: Vec<Attribute>,
     pub color: ElementColor,
     pub heat: f32,
     pub moisture: f32,
     pub mass: f32,
 }
 
-impl Cell {
+impl Element {
     fn render(&self) -> u32 {
         let r = (self.color.r * 255.0) as u32;
         let g = (self.color.g * 255.0) as u32;
@@ -39,7 +38,7 @@ impl Cell {
 }
 
 pub struct World {
-    pub cells: SwapBuffer<Cell>,
+    pub cells: SwapBuffer<Element>,
 }
 
 impl World {
@@ -49,8 +48,9 @@ impl World {
         let cells = (0..W * H)
             .map(|_| {
                 if rng.gen::<bool>() {
-                    Cell {
-                        element_type: ElementType::Water,
+                    Element {
+                        name: "Water".into(),
+                        attributes: vec![Attribute::Fallable, Attribute::Liquid],
                         color: ElementColor {
                             r: 10.0 / 255.0,
                             g: 10.0 / 255.0,
@@ -61,8 +61,9 @@ impl World {
                         mass: 1.0,
                     }
                 } else {
-                    Cell {
-                        element_type: ElementType::Air,
+                    Element {
+                        name: "Air".into(),
+                        attributes: vec![],
                         color: ElementColor {
                             r: 80.0 / 255.0,
                             g: 180.0 / 255.0,
@@ -74,7 +75,7 @@ impl World {
                     }
                 }
             })
-            .collect::<Vec<Cell>>();
+            .collect::<Vec<Element>>();
 
         World {
             cells: SwapBuffer::from_arr(cells, W),
@@ -87,50 +88,24 @@ impl World {
 
         for x in 0..W {
             for y in 0..H {
-                ew[y * W + x] = er[y * W + x];
+                ew[y * W + x] = er[y * W + x].clone();
             }
         }
 
         let mut rng = rand::thread_rng();
 
         let (startx, endx, step) = if rng.gen::<bool>() {
-            (0 as i32,W as i32,1 as i32)
+            (0 as i32, W as i32, 1 as i32)
         } else {
-            ((W-1) as i32,-1,-1)
+            ((W - 1) as i32, -1, -1)
         };
         let mut ix = startx;
 
         while ix != endx {
             let x = ix as usize;
             for y in (0..H).rev() {
-                let cell = er[y * W + x];
-                if cell.element_type == ElementType::Sand {
-                    let cell = er[y * W + x];
-                    if cell.element_type == ElementType::Sand {
-                        let mut positions_to_check = vec![(0, -1)];
-
-                        if rng.gen() {
-                            positions_to_check.push((-1, -1));
-                            positions_to_check.push((1, -1));
-                        } else {
-                            positions_to_check.push((1, -1));
-                            positions_to_check.push((-1, -1));
-                        }
-
-                        for (dx, dy) in positions_to_check {
-                            let new_x = x as isize + dx;
-                            let new_y = y as isize + dy;
-
-                            if in_bounds(new_x, new_y)
-                                && er[new_y as usize * W + new_x as usize].mass < cell.mass
-                            {
-                                ew.swap(y * W + x, new_y as usize * W + new_x as usize);
-                                break;
-                            }
-                        }
-                    }
-                } else if cell.element_type == ElementType::Water {
-                    let mut rng = rand::thread_rng();
+                let cell = &er[y * W + x];
+                if cell.attributes.contains(&Attribute::Fallable) {
                     let mut positions_to_check = vec![(0, -1)];
 
                     if rng.gen() {
@@ -140,10 +115,6 @@ impl World {
                         positions_to_check.push((1, -1));
                         positions_to_check.push((-1, -1));
                     }
-
-                    // if x == 15 && y == 5 {
-                    //     println!("Below: {:?}", er[(y - 1) * W + x]);
-                    // }
 
                     let mut moved = false;
                     for (dx, dy) in positions_to_check {
@@ -158,7 +129,7 @@ impl World {
                             break;
                         }
                     }
-                    if moved {
+                    if moved || !cell.attributes.contains(&Attribute::Liquid) {
                         continue;
                     }
 
@@ -176,8 +147,7 @@ impl World {
                         let new_y = y as isize + dy;
 
                         if in_bounds(new_x, new_y)
-                            && er[new_y as usize * W + new_x as usize].element_type
-                                == ElementType::Air
+                            && er[new_y as usize * W + new_x as usize].mass < cell.mass
                         {
                             ew.swap(y * W + x, new_y as usize * W + new_x as usize);
                             break;

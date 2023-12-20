@@ -4,7 +4,7 @@ pub struct SwapBuffer<T> {
     pub w: Vec<T>,
 }
 
-impl<T: Sync + Send + Copy> SwapBuffer<T> {
+impl<T: Sync + Send + Clone> SwapBuffer<T> {
     pub fn swap(&mut self) {
         std::mem::swap(&mut self.r, &mut self.w);
     }
@@ -16,7 +16,7 @@ impl<T: Sync + Send + Copy> SwapBuffer<T> {
     }
 }
 
-impl<T: Copy> SwapBuffer<T> {
+impl<T: Clone> SwapBuffer<T> {
     pub fn from_arr(base: Vec<T>, width: usize) -> SwapBuffer<T> {
         SwapBuffer {
             width,
