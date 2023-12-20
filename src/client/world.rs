@@ -104,54 +104,42 @@ impl World {
         while ix != endx {
             let x = ix as usize;
             for y in (0..H).rev() {
+                let cell_index = y * W + x;
                 let cell = &er[y * W + x];
                 if cell.attributes.contains(&Attribute::Fallable) {
-                    let mut positions_to_check = vec![(0, -1)];
-
-                    if rng.gen() {
-                        positions_to_check.push((-1, -1));
-                        positions_to_check.push((1, -1));
+                    let positions_to_check = if rng.gen() {
+                        [(0, -1), (-1, -1), (1, -1)]
                     } else {
-                        positions_to_check.push((1, -1));
-                        positions_to_check.push((-1, -1));
-                    }
+                        [(0, -1), (1, -1), (-1, -1)]
+                    };
 
-                    let mut moved = false;
-                    for (dx, dy) in positions_to_check {
+                    if let Some((dx, dy)) = positions_to_check.iter().find(|&&(dx, dy)| {
                         let new_x = x as isize + dx;
                         let new_y = y as isize + dy;
-
-                        if in_bounds(new_x, new_y)
-                            && er[new_y as usize * W + new_x as usize].mass < cell.mass
-                        {
-                            ew.swap(y * W + x, new_y as usize * W + new_x as usize);
-                            moved = true;
-                            break;
-                        }
+                        in_bounds(new_x, new_y) && er[new_y as usize * W + new_x as usize].mass < cell.mass
+                    }) {
+                        let new_x = x as isize + dx;
+                        let new_y = y as isize + dy;
+                        ew.swap(cell_index, new_y as usize * W + new_x as usize);
+                        continue;
                     }
-                    if moved || !cell.attributes.contains(&Attribute::Liquid) {
+                    if !cell.attributes.contains(&Attribute::Liquid) {
                         continue;
                     }
 
-                    let mut positions_to_check = vec![];
-                    if rng.gen() {
-                        positions_to_check.push((-1, 0));
-                        positions_to_check.push((1, 0));
+                    let positions_to_check = if rng.gen() {
+                        [(-1, 0), (1, 0)]
                     } else {
-                        positions_to_check.push((1, 0));
-                        positions_to_check.push((-1, 0));
-                    }
+                        [(1, 0), (-1, 0)]
+                    };
 
-                    for (dx, dy) in positions_to_check {
+                    if let Some((dx, _)) = positions_to_check.iter().find(|&&(dx, _)| {
                         let new_x = x as isize + dx;
-                        let new_y = y as isize + dy;
-
-                        if in_bounds(new_x, new_y)
-                            && er[new_y as usize * W + new_x as usize].mass < cell.mass
-                        {
-                            ew.swap(y * W + x, new_y as usize * W + new_x as usize);
-                            break;
-                        }
+                        let new_y = y as isize;
+                        in_bounds(new_x, new_y) && er[new_y as usize * W + new_x as usize].mass < cell.mass
+                    }) {
+                        let new_x = x as isize + dx;
+                        ew.swap(cell_index, y * W + new_x as usize);
                     }
                 }
             }
