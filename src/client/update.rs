@@ -1,3 +1,5 @@
+use crate::util::vector::Vec2;
+
 use super::{input::Input, render::Renderer, ClientState, MouseMode};
 use std::time::Duration;
 use winit::event::{MouseButton, VirtualKeyCode as Key};
@@ -51,6 +53,32 @@ pub fn update(
             {
                 if *d > 0.0 {
                     v.y -= 100.0 * t_delta.as_secs_f32();
+                }
+            }
+        }
+        let cursor_pos = state
+            .camera
+            .cursor_world_pos(input.mouse_pixel_pos, &renderer.window.inner_size());
+        let cursor_grid_pos = cursor_pos.to_grid(state.world.size());
+        if let Some(pos) = cursor_grid_pos {
+            let pos: Vec2<f32> = pos.into();
+            if input.pressed(Key::H) {
+                for x in 0..state.world.size().x {
+                    for y in 0..state.world.size().y {
+                        let lpos = Vec2 { x, y };
+                        let i = lpos.index(state.world.size().x);
+                        let flpos: Vec2<f32> = lpos.into();
+                        if state.world.liquid.dens[i] > 0.0 {
+                            let vec = pos - flpos;
+                            let rad = 5.0;
+                            let mult = 100.0 / rad * vec.mag().powi(2).min(rad);
+                            let towards = vec.norm() * mult / vec.mag().powi(2);
+                            let with = (cursor_pos - state.prev_curs_pos) / vec.mag().powi(2);
+                            if mult != 0.0 {
+                                state.world.liquid.vel[i] += towards + with;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -108,6 +136,10 @@ pub fn update(
         }
     }
 
+    let cursor_pos = state
+        .camera
+        .cursor_world_pos(input.mouse_pixel_pos, &renderer.window.inner_size());
+    state.prev_curs_pos = cursor_pos;
     false
 }
 

@@ -1,4 +1,4 @@
-use crate::world::World;
+use crate::{world::World, util::vector::Vec2};
 
 use super::{camera::Camera, render::tile::TileInstance};
 
@@ -10,6 +10,7 @@ pub struct ClientState {
     pub width: u32,
     pub world: World,
     pub running: bool,
+    pub prev_curs_pos: Vec2<f32>,
 }
 
 impl ClientState {
@@ -28,6 +29,7 @@ impl ClientState {
             width: world.size().x as u32,
             world,
             running: true,
+            prev_curs_pos: Vec2::zero(),
         }
     }
 }
