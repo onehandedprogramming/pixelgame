@@ -1,8 +1,8 @@
 use std::time::Duration;
 
 use crate::{
-    client::{world::{W}, elements::{STEAM, SAND, STONE}},
-    util::point::Point,
+    client::{world::{W}, elements::{DEF_ELEMS, ElementType}},
+    util::point::Point, get_element,
 };
 
 use super::{
@@ -52,20 +52,20 @@ pub fn update(
     if input.just_pressed(Key::V) {
         if let Some(pos) = cursor_grid_pos {
             let i = pos.index(W as u32) as usize;
-            state.world.cells.r[i] = STEAM.clone();
+            state.world.cells.r[i] = get_element!(ElementType::Steam);
         }
     }
 
     if input.mouse_pressed(winit::event::MouseButton::Left) {
         if let Some(pos) = cursor_grid_pos {
             let i = pos.index(W as u32) as usize;
-            state.world.cells.r[i] = SAND.clone();
+            state.world.cells.r[i] = get_element!(ElementType::Sand);
         }
     }
     if input.mouse_pressed(winit::event::MouseButton::Right) {
         if let Some(pos) = cursor_grid_pos {
             let i = pos.index(W as u32) as usize;
-            state.world.cells.r[i] = STONE.clone();
+            state.world.cells.r[i] = get_element!(ElementType::Stone);
         }
         // if let Some(pos) = cursor_grid_pos {
         //     let i = pos.index(W as u32) as usize;

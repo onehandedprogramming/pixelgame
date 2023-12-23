@@ -1,5 +1,7 @@
+use crate::{get_element, client::elements::ElementType};
+
 use super::{
-    elements::{Attribute, Element, AIR, WATER},
+    elements::{Attribute, Element},
     swap_buffer::SwapBuffer,
 };
 use rand::Rng;
@@ -8,7 +10,7 @@ pub const W: usize = 100;
 pub const H: usize = 100;
 
 pub const EVAP_RATE: f32 = 0.0001;
-pub const CONDENS_RATE: f32 = 0.01;
+pub const CONDENS_RATE: f32 = 0.0001;
 
 pub struct World {
     pub cells: SwapBuffer<Element>,
@@ -21,9 +23,9 @@ impl World {
         let cells = (0..W * H)
             .map(|_| {
                 if rng.gen::<bool>() {
-                    WATER.clone()
+                    get_element!(ElementType::Water)
                 } else {
-                    AIR.clone()
+                    get_element!(ElementType::Air)
                 }
             })
             .collect::<Vec<Element>>();
@@ -148,36 +150,75 @@ fn update_main(rng: &mut rand::prelude::ThreadRng, ew: &mut Vec<Element>) {
                 }
             }
 
+            repeat_once = false;
+            y += 1;
+        }
+
+        y = 0;
+        while y < H {
             let cell = &mut ew[y * W + x];
 
             let directions = [(-1, 0), (1, 0), (0, -1), (0, 1)];
 
-            if cell.attributes.iter().any(|attr| matches!(attr, Attribute::CanEvaporate(_))) {
+            if cell
+                .attributes
+                .iter()
+                .any(|attr| matches!(attr, Attribute::CanEvaporate(_)))
+            {
                 let mut emp_adj = 0;
                 for &(dy, dx) in &directions {
                     let new_y = (y as isize + dy) as usize;
                     let new_x = (x as isize + dx) as usize;
-    
+
                     if in_bounds(new_x as isize, new_y as isize) {
                         if ew[new_y * W + new_x].attributes.contains(&Attribute::Air) {
                             emp_adj += 1;
                         }
-                    } else {
-                        emp_adj += 1;
                     }
                 }
-    
+
                 for attr in &ew[y * W + x].attributes {
                     if let Attribute::CanEvaporate(element) = attr {
                         if rng.gen::<f32>() < EVAP_RATE * emp_adj as f32 {
-                            ew[y * W + x] = element.clone();
+                            ew[y * W + x] = get_element!(element);
                         }
                         break;
                     }
                 }
             }
 
-            repeat_once = false;
+            let cell = &ew[y * W + x];
+
+            let rgne = 3;
+            let mut stm_adj = 0;
+
+            if cell
+                .attributes
+                .iter()
+                .any(|attr| matches!(attr, Attribute::CanCondensate(_)))
+            {
+                for ny in (y.saturating_sub(rgne))..=(y + rgne).min(H - 1) {
+                    for nx in (x.saturating_sub(rgne))..=(x + rgne).min(W - 1) {
+                        if in_bounds(ny as isize, nx as isize) {
+                            if ew[ny * W + nx].id.eq(&cell.id) {
+                                stm_adj += 1;
+                            }
+                        } else {
+                            stm_adj += 1;
+                        }
+                    }
+                }
+
+                for attr in &ew[y * W + x].attributes {
+                    if let Attribute::CanCondensate(element) = attr {
+                        if rng.gen::<f32>() < CONDENS_RATE * stm_adj as f32 {
+                            ew[y * W + x] = get_element!(element);
+                        }
+                        break;
+                    }
+                }
+            }
+
             y += 1;
         }
         ix = ix as i32 + step;
