@@ -158,6 +158,12 @@ fn update_main(rng: &mut rand::prelude::ThreadRng, ew: &mut Vec<Element>) {
         while y < H {
             let cell = &mut ew[y * W + x];
 
+            if cell.attributes.contains(&Attribute::Liquid) {
+                cell.vary_color();
+            }
+
+            let cell = &mut ew[y * W + x];
+
             let directions = [(-1, 0), (1, 0), (0, -1), (0, 1)];
 
             if cell

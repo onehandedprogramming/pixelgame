@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use lazy_static::lazy_static;
+use rand::Rng;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ElementType {
@@ -16,86 +17,111 @@ lazy_static! {
         let mut m = HashMap::new();
         m.insert(
             ElementType::Air,
-            Element {
-                id: "Air".into(),
-                attributes: vec![Attribute::Air],
-                color: ElementColor {
+            Element::new(
+                "Air",
+                vec![Attribute::Air],
+                ElementColor {
                     r: 80.0 / 255.0,
                     g: 180.0 / 255.0,
                     b: 210.0 / 255.0,
+                    rv: 0.0,
+                    gv: 0.0,
+                    bv: 0.0,
+                    dv: 0.0,
+                    ..Default::default()
                 },
-                heat: 0.0,
-                moisture: 0.0,
-                density: 0.05,
-            },
+                0.0,
+                0.0,
+                0.05,
+            ),
         );
         m.insert(
             ElementType::Water,
-            Element {
-                id: "Water".into(),
-                attributes: vec![
+            Element::new(
+                "Water",
+                vec![
                     Attribute::CanFall,
                     Attribute::Liquid,
                     Attribute::CanEvaporate(ElementType::Steam),
                 ],
-                color: ElementColor {
+                ElementColor {
                     r: 10.0 / 255.0,
-                    g: 10.0 / 255.0,
-                    b: 255.0 / 255.0,
+                    g: 80.0 / 255.0,
+                    b: 235.0 / 255.0,
+                    rv: 0.00,
+                    gv: 0.00,
+                    bv: 0.0,
+                    dv: 0.004,
+                    max_dist: 0.015,
                 },
-                heat: 0.0,
-                moisture: 0.0,
-                density: 1.0,
-            },
+                0.0,
+                0.0,
+                1.0,
+            ),
         );
         m.insert(
             ElementType::Sand,
-            Element {
-                id: "Sand".into(),
-                attributes: vec![Attribute::CanFall, Attribute::Solid],
-                color: ElementColor {
+            Element::new(
+                "Sand",
+                vec![Attribute::CanFall, Attribute::Solid],
+                ElementColor {
                     r: 210.0 / 255.0,
                     g: 190.0 / 255.0,
                     b: 110.0 / 255.0,
+                    rv: 0.1,
+                    gv: 0.01,
+                    bv: 0.01,
+                    dv: 0.08,
+                    ..Default::default()
                 },
-                heat: 0.0,
-                moisture: 0.0,
-                density: 5.0,
-            },
+                0.0,
+                0.0,
+                5.0,
+            ),
         );
         m.insert(
             ElementType::Stone,
-            Element {
-                id: "Stone".into(),
-                attributes: vec![Attribute::Immovable, Attribute::Solid],
-                color: ElementColor {
+            Element::new(
+                "Stone",
+                vec![Attribute::Immovable, Attribute::Solid],
+                ElementColor {
                     r: 60.0 / 255.0,
                     g: 60.0 / 255.0,
                     b: 60.0 / 255.0,
+                    rv: 0.01,
+                    gv: 0.02,
+                    bv: 0.03,
+                    dv: 0.1,
+                    ..Default::default()
                 },
-                heat: 0.0,
-                moisture: 0.0,
-                density: 10.0,
-            },
+                0.0,
+                0.0,
+                10.0,
+            ),
         );
         m.insert(
             ElementType::Steam,
-            Element {
-                id: "Steam".into(),
-                attributes: vec![
+            Element::new(
+                "Steam",
+                vec![
                     Attribute::CanFall,
                     Attribute::Gas,
                     Attribute::CanCondensate(ElementType::Water),
                 ],
-                color: ElementColor {
+                ElementColor {
                     r: 150.0 / 255.0,
                     g: 220.0 / 255.0,
                     b: 230.0 / 255.0,
+                    rv: 0.01,
+                    gv: 0.03,
+                    bv: 0.07,
+                    dv: 0.01,
+                    ..Default::default()
                 },
-                heat: 0.0,
-                moisture: 0.0,
-                density: 0.01,
-            },
+                0.0,
+                0.0,
+                0.01,
+            ),
         );
         m
     };
@@ -104,7 +130,10 @@ lazy_static! {
 #[macro_export]
 macro_rules! get_element {
     ($element_type:expr) => {
-        crate::client::elements::DEF_ELEMS.get(&$element_type).unwrap().clone()
+        crate::client::elements::DEF_ELEMS
+            .get(&$element_type)
+            .unwrap()
+            .create()
     };
 }
 
@@ -125,6 +154,48 @@ pub struct ElementColor {
     pub r: f32,
     pub g: f32,
     pub b: f32,
+    pub rv: f32,
+    pub gv: f32,
+    pub bv: f32,
+    pub dv: f32,
+    pub max_dist: f32,
+}
+
+impl ElementColor {
+    pub fn new(r: f32, g: f32, b: f32, rv: f32, gv: f32, bv: f32, dv: f32, max_dist: f32) -> Self {
+        ElementColor {
+            r,
+            g,
+            b,
+            rv,
+            gv,
+            bv,
+            dv,
+            max_dist,
+        }
+    }
+}
+
+impl Default for ElementColor {
+    fn default() -> Self {
+        ElementColor {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            rv: 0.0,
+            gv: 0.0,
+            bv: 0.0,
+            dv: 0.0,
+            max_dist: 5.0,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct RenderColor {
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -132,17 +203,81 @@ pub struct Element {
     pub id: Box<str>,
     pub attributes: Vec<Attribute>,
     pub color: ElementColor,
+    render_color: RenderColor,
     pub heat: f32,
     pub moisture: f32,
     pub density: f32,
 }
 
 impl Element {
+    pub fn new(
+        id: &str,
+        attributes: Vec<Attribute>,
+        color: ElementColor,
+        heat: f32,
+        moisture: f32,
+        density: f32,
+    ) -> Self {
+        Element {
+            id: id.into(),
+            attributes,
+            color,
+            render_color: RenderColor {
+                r: color.r,
+                g: color.g,
+                b: color.b,
+            },
+            heat,
+            moisture,
+            density,
+        }
+    }
+
     pub fn render(&self) -> u32 {
-        let r = (self.color.r * 255.0) as u32;
-        let g = (self.color.g * 255.0) as u32;
-        let b = (self.color.b * 255.0) as u32;
+        let r = (self.render_color.r * 255.0) as u32;
+        let g = (self.render_color.g * 255.0) as u32;
+        let b = (self.render_color.b * 255.0) as u32;
 
         (r << 16) | (g << 8) | b
+    }
+
+    pub fn create(&self) -> Self {
+        let mut element = self.clone();
+        element.vary_color();
+        element
+    }
+
+    pub fn vary_color(&mut self) {
+        let mut rng = rand::thread_rng();
+
+        let darken_delta = rng.gen_range(-self.color.dv..=self.color.dv);
+        let adjust_color = |color: f32, variance: f32| -> f32 {
+            let mut rng = rand::thread_rng();
+            let delta = rng.gen_range(-variance..=variance);
+            let new_color = color + delta + darken_delta;
+            new_color.clamp(0.0, 1.0)
+        };
+
+        
+        let new_r = adjust_color(self.render_color.r, self.color.rv);
+        let new_g = adjust_color(self.render_color.g, self.color.gv);
+        let new_b = adjust_color(self.render_color.b, self.color.bv);
+
+        let distance = (
+            (new_r - self.color.r).powi(2) +
+            (new_g - self.color.g).powi(2) +
+            (new_b - self.color.b).powi(2)
+        ).sqrt();
+
+        if distance > self.color.max_dist {
+            let scale = self.color.max_dist / distance;
+            self.render_color.r = self.color.r + (new_r - self.color.r) * scale;
+            self.render_color.g = self.color.g + (new_g - self.color.g) * scale;
+            self.render_color.b = self.color.b + (new_b - self.color.b) * scale;
+        } else {
+            self.render_color.r = new_r;
+            self.render_color.g = new_g;
+            self.render_color.b = new_b;
+        }
     }
 }
