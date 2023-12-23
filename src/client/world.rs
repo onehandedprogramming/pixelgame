@@ -1,50 +1,14 @@
-use super::{swap_buffer::SwapBuffer, elements::{WATER, AIR}};
+use super::{
+    elements::{Attribute, Element, AIR, WATER},
+    swap_buffer::SwapBuffer,
+};
 use rand::Rng;
 
 pub const W: usize = 100;
 pub const H: usize = 100;
 
-pub const EVAP_RATE: f32 = 0.01;
+pub const EVAP_RATE: f32 = 0.0001;
 pub const CONDENS_RATE: f32 = 0.01;
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Attribute {
-    CanEvaporate(Element),
-    CanCondensate(Element),
-    CanFall,
-    Solid,
-    Liquid,
-    Gas,
-    Immovable,
-    Air,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct ElementColor {
-    pub r: f32,
-    pub g: f32,
-    pub b: f32,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct Element {
-    pub name: Box<str>,
-    pub attributes: Vec<Attribute>,
-    pub color: ElementColor,
-    pub heat: f32,
-    pub moisture: f32,
-    pub density: f32,
-}
-
-impl Element {
-    fn render(&self) -> u32 {
-        let r = (self.color.r * 255.0) as u32;
-        let g = (self.color.g * 255.0) as u32;
-        let b = (self.color.b * 255.0) as u32;
-
-        (r << 16) | (g << 8) | b
-    }
-}
 
 pub struct World {
     pub cells: SwapBuffer<Element>,
@@ -174,12 +138,42 @@ fn update_main(rng: &mut rand::prelude::ThreadRng, ew: &mut Vec<Element>) {
                     let liquid_and_gas = cell.attributes.contains(&Attribute::Liquid)
                         && other_cell.attributes.contains(&Attribute::Gas);
 
-                    !liquid_and_gas && ew[new_y as usize * W + new_x as usize].density < cell.density
+                    !liquid_and_gas
+                        && ew[new_y as usize * W + new_x as usize].density < cell.density
                 }) {
                     let new_x = x as isize + dx;
                     ew.swap(cell_index, y * W + new_x as usize);
                     y += 1;
                     continue;
+                }
+            }
+
+            let cell = &mut ew[y * W + x];
+
+            let directions = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+
+            if cell.attributes.iter().any(|attr| matches!(attr, Attribute::CanEvaporate(_))) {
+                let mut emp_adj = 0;
+                for &(dy, dx) in &directions {
+                    let new_y = (y as isize + dy) as usize;
+                    let new_x = (x as isize + dx) as usize;
+    
+                    if in_bounds(new_x as isize, new_y as isize) {
+                        if ew[new_y * W + new_x].attributes.contains(&Attribute::Air) {
+                            emp_adj += 1;
+                        }
+                    } else {
+                        emp_adj += 1;
+                    }
+                }
+    
+                for attr in &ew[y * W + x].attributes {
+                    if let Attribute::CanEvaporate(element) = attr {
+                        if rng.gen::<f32>() < EVAP_RATE * emp_adj as f32 {
+                            ew[y * W + x] = element.clone();
+                        }
+                        break;
+                    }
                 }
             }
 
@@ -232,9 +226,11 @@ fn update_gases(rng: &mut rand::prelude::ThreadRng, ew: &mut Vec<Element>) {
                             .attributes
                             .contains(&Attribute::Immovable);
                     let other_cell_fluid = other_cell.attributes.contains(&Attribute::Gas)
-                        || other_cell.attributes.contains(&Attribute::Liquid) || other_cell.attributes.contains(&Attribute::Air);
+                        || other_cell.attributes.contains(&Attribute::Liquid)
+                        || other_cell.attributes.contains(&Attribute::Air);
 
-                    !current_cell_immovable && (other_cell_fluid && other_cell.density > cell.density)
+                    !current_cell_immovable
+                        && (other_cell_fluid && other_cell.density > cell.density)
                 }) {
                     let new_x = x as isize + dx;
                     let new_y = y as isize + dy;
