@@ -66,7 +66,7 @@ impl World {
                 } else {
                     Element {
                         name: "Air".into(),
-                        attributes: vec![],
+                        attributes: vec![Attribute::Gas],
                         color: ElementColor {
                             r: 80.0 / 255.0,
                             g: 180.0 / 255.0,
@@ -234,10 +234,9 @@ fn update_gases(rng: &mut rand::prelude::ThreadRng, ew: &mut Vec<Element>) {
                         && ew[(y + 1) * W + x]
                             .attributes
                             .contains(&Attribute::Immovable);
-                    let both_cells_solid = cell.attributes.contains(&Attribute::Solid)
-                        && other_cell.attributes.contains(&Attribute::Solid);
+                    let other_cell_gas = other_cell.attributes.contains(&Attribute::Gas);
 
-                    !current_cell_immovable && (!both_cells_solid && other_cell.mass > cell.mass)
+                    !current_cell_immovable && (other_cell_gas && other_cell.mass > cell.mass)
                 }) {
                     let new_x = x as isize + dx;
                     let new_y = y as isize + dy;

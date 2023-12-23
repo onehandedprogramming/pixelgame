@@ -63,9 +63,9 @@ pub fn update(
                 name: "Steam".into(),
                 attributes: vec![Attribute::Fallable, Attribute::Gas],
                 color: ElementColor {
-                    r: 210.0 / 255.0,
-                    g: 210.0 / 255.0,
-                    b: 220.0 / 255.0,
+                    r: 180.0 / 255.0,
+                    g: 230.0 / 255.0,
+                    b: 230.0 / 255.0,
                 },
                 heat: 0.0,
                 moisture: 0.0,
