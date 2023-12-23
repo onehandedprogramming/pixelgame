@@ -1,4 +1,4 @@
-use crate::{get_element, client::elements::ElementType};
+use crate::{client::elements::ElementType, get_element};
 
 use super::{
     elements::{Attribute, Element},
@@ -93,12 +93,14 @@ fn update_main(rng: &mut rand::prelude::ThreadRng, ew: &mut Vec<Element>) {
                     let current_cell_immovable = ew[(y - 1) * W + x]
                         .attributes
                         .contains(&Attribute::Immovable);
+                    let other_cell_immovable =
+                        other_cell.attributes.contains(&Attribute::Immovable);
                     let both_cells_solid = cell.attributes.contains(&Attribute::Solid)
                         && other_cell.attributes.contains(&Attribute::Solid);
                     let liquid_and_gas = cell.attributes.contains(&Attribute::Liquid)
                         && other_cell.attributes.contains(&Attribute::Gas);
 
-                    !current_cell_immovable
+                    !current_cell_immovable && !other_cell_immovable
                         && !liquid_and_gas
                         && (!both_cells_solid && other_cell.density < cell.density)
                 }) {
@@ -137,11 +139,18 @@ fn update_main(rng: &mut rand::prelude::ThreadRng, ew: &mut Vec<Element>) {
 
                     let other_cell = &ew[new_y * W + new_x];
 
+                    let other_cell_immovable =
+                        other_cell.attributes.contains(&Attribute::Immovable);
+
                     let liquid_and_gas = cell.attributes.contains(&Attribute::Liquid)
                         && other_cell.attributes.contains(&Attribute::Gas);
 
-                    !liquid_and_gas
-                        && ew[new_y as usize * W + new_x as usize].density < cell.density
+                    // if cell.id == "Bendium".into() && other_cell_immovable {
+                    //     println!("Result: {}", !liquid_and_gas && !other_cell_immovable
+                    //     && other_cell.density < cell.density);
+                    // }
+
+                    !liquid_and_gas && !other_cell_immovable && other_cell.density < cell.density
                 }) {
                     let new_x = x as isize + dx;
                     ew.swap(cell_index, y * W + new_x as usize);
@@ -158,7 +167,7 @@ fn update_main(rng: &mut rand::prelude::ThreadRng, ew: &mut Vec<Element>) {
         while y < H {
             let cell = &mut ew[y * W + x];
 
-            if cell.attributes.contains(&Attribute::Liquid) {
+            if cell.attributes.contains(&Attribute::VaryColor) {
                 cell.vary_color();
             }
 
@@ -272,11 +281,14 @@ fn update_gases(rng: &mut rand::prelude::ThreadRng, ew: &mut Vec<Element>) {
                         && ew[(y + 1) * W + x]
                             .attributes
                             .contains(&Attribute::Immovable);
+                    let other_cell_immovable =
+                        other_cell.attributes.contains(&Attribute::Immovable);
+
                     let other_cell_fluid = other_cell.attributes.contains(&Attribute::Gas)
                         || other_cell.attributes.contains(&Attribute::Liquid)
                         || other_cell.attributes.contains(&Attribute::Air);
 
-                    !current_cell_immovable
+                    !current_cell_immovable && !other_cell_immovable
                         && (other_cell_fluid && other_cell.density > cell.density)
                 }) {
                     let new_x = x as isize + dx;

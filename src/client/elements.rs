@@ -10,6 +10,7 @@ pub enum ElementType {
     Sand,
     Stone,
     Steam,
+    Bendium,
 }
 
 lazy_static! {
@@ -43,6 +44,7 @@ lazy_static! {
                     Attribute::CanFall,
                     Attribute::Liquid,
                     Attribute::CanEvaporate(ElementType::Steam),
+                    Attribute::VaryColor,
                 ],
                 ElementColor {
                     r: 10.0 / 255.0,
@@ -123,6 +125,29 @@ lazy_static! {
                 0.01,
             ),
         );
+        m.insert(
+            ElementType::Bendium,
+            Element::new(
+                "Bendium",
+                vec![
+                    Attribute::CanFall,
+                    Attribute::Liquid,
+                ],
+                ElementColor {
+                    r: 0.5,
+                    g: 0.5,
+                    b: 0.5,
+                    rv: 0.5,
+                    gv: 0.5,
+                    bv: 0.5,
+                    dv: 0.0,
+                    ..Default::default()
+                },
+                0.0,
+                0.0,
+                20.0,
+            ),
+        );
         m
     };
 }
@@ -146,6 +171,7 @@ pub enum Attribute {
     Liquid,
     Gas,
     Immovable,
+    VaryColor,
     Air,
 }
 
@@ -258,16 +284,14 @@ impl Element {
             new_color.clamp(0.0, 1.0)
         };
 
-        
         let new_r = adjust_color(self.render_color.r, self.color.rv);
         let new_g = adjust_color(self.render_color.g, self.color.gv);
         let new_b = adjust_color(self.render_color.b, self.color.bv);
 
-        let distance = (
-            (new_r - self.color.r).powi(2) +
-            (new_g - self.color.g).powi(2) +
-            (new_b - self.color.b).powi(2)
-        ).sqrt();
+        let distance = ((new_r - self.color.r).powi(2)
+            + (new_g - self.color.g).powi(2)
+            + (new_b - self.color.b).powi(2))
+        .sqrt();
 
         if distance > self.color.max_dist {
             let scale = self.color.max_dist / distance;

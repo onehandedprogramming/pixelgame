@@ -49,6 +49,13 @@ pub fn update(
         pos.x += move_dist;
     }
 
+    if input.just_pressed(Key::B) {
+        if let Some(pos) = cursor_grid_pos {
+            let i = pos.index(W as u32) as usize;
+            state.world.cells.r[i] = get_element!(ElementType::Bendium);
+        }
+    }
+
     if input.just_pressed(Key::V) {
         if let Some(pos) = cursor_grid_pos {
             let i = pos.index(W as u32) as usize;
