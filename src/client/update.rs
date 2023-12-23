@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crate::{
-    client::world::{Attribute, Element, ElementColor, W},
+    client::{world::{Attribute, Element, ElementColor, W}, elements::{SAND, STONE, STEAM}},
     util::point::Point,
 };
 
@@ -50,59 +50,22 @@ pub fn update(
     }
 
     if input.just_pressed(Key::V) {
-        state.mouse_mode = match state.mouse_mode {
-            MouseMode::Vel => MouseMode::Dens,
-            MouseMode::Dens => MouseMode::Vel,
+        if let Some(pos) = cursor_grid_pos {
+            let i = pos.index(W as u32) as usize;
+            state.world.cells.r[i] = STEAM.clone();
         }
     }
 
     if input.mouse_pressed(winit::event::MouseButton::Left) {
         if let Some(pos) = cursor_grid_pos {
             let i = pos.index(W as u32) as usize;
-            state.world.cells.r[i] = Element {
-                name: "Steam".into(),
-                attributes: vec![Attribute::Fallable, Attribute::Gas],
-                color: ElementColor {
-                    r: 180.0 / 255.0,
-                    g: 230.0 / 255.0,
-                    b: 230.0 / 255.0,
-                },
-                heat: 0.0,
-                moisture: 0.0,
-                mass: 0.01,
-            };
+            state.world.cells.r[i] = SAND.clone();
         }
-        // if let Some(pos) = cursor_grid_pos {
-        //     let i = pos.index(W as u32) as usize;
-        //     state.world.cells.r[i] = Element {
-        //         name: "Sand".into(),
-        //         attributes: vec![Attribute::Fallable, Attribute::Solid],
-        //         color: ElementColor {
-        //             r: 210.0 / 255.0,
-        //             g: 190.0 / 255.0,
-        //             b: 110.0 / 255.0,
-        //         },
-        //         heat: 0.0,
-        //         moisture: 0.0,
-        //         mass: 5.0,
-        //     };
-        // }
     }
     if input.mouse_pressed(winit::event::MouseButton::Right) {
         if let Some(pos) = cursor_grid_pos {
             let i = pos.index(W as u32) as usize;
-            state.world.cells.r[i] = Element {
-                name: "Stone".into(),
-                attributes: vec![Attribute::Immovable, Attribute::Solid],
-                color: ElementColor {
-                    r: 60.0 / 255.0,
-                    g: 60.0 / 255.0,
-                    b: 60.0 / 255.0,
-                },
-                heat: 0.0,
-                moisture: 0.0,
-                mass: 10.0,
-            };
+            state.world.cells.r[i] = STONE.clone();
         }
         // if let Some(pos) = cursor_grid_pos {
         //     let i = pos.index(W as u32) as usize;
