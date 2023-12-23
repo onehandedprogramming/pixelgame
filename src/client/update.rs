@@ -1,7 +1,7 @@
-use std::{time::Duration};
+use std::time::Duration;
 
 use crate::{
-    client::world::{W, Element, ElementColor, Attribute},
+    client::world::{Attribute, Element, ElementColor, W},
     util::point::Point,
 };
 
@@ -60,33 +60,81 @@ pub fn update(
         if let Some(pos) = cursor_grid_pos {
             let i = pos.index(W as u32) as usize;
             state.world.cells.r[i] = Element {
-                name: "Sand".into(),
-                attributes: vec![Attribute::Fallable],
+                name: "Steam".into(),
+                attributes: vec![Attribute::Fallable, Attribute::Gas],
                 color: ElementColor {
                     r: 210.0 / 255.0,
-                    g: 190.0 / 255.0,
-                    b: 110.0 / 255.0,
+                    g: 210.0 / 255.0,
+                    b: 220.0 / 255.0,
                 },
                 heat: 0.0,
                 moisture: 0.0,
-                mass: 5.0,
+                mass: 0.01,
             };
         }
+        // if let Some(pos) = cursor_grid_pos {
+        //     let i = pos.index(W as u32) as usize;
+        //     state.world.cells.r[i] = Element {
+        //         name: "Sand".into(),
+        //         attributes: vec![Attribute::Fallable, Attribute::Solid],
+        //         color: ElementColor {
+        //             r: 210.0 / 255.0,
+        //             g: 190.0 / 255.0,
+        //             b: 110.0 / 255.0,
+        //         },
+        //         heat: 0.0,
+        //         moisture: 0.0,
+        //         mass: 5.0,
+        //     };
+        // }
     }
-    // if input.mouse_pressed(winit::event::MouseButton::Right) {
-    //     if let Some(pos) = cursor_grid_pos {
-    //         let i = pos.index(state.world.width() as u32) as usize;
-    //         state.world.n0[i] = 0.0;
-    //         // state.world.nN[i] = 0.0;
-    //         // state.world.nS[i] = 0.0;
-    //         // state.world.nE[i] = 0.0;
-    //         // state.world.nW[i] = 0.0;
-    //         // state.world.nNW[i] = 0.0;
-    //         // state.world.nNE[i] = 0.0;
-    //         // state.world.nSW[i] = 0.0;
-    //         // state.world.nSE[i] = 0.0;
-    //     }
-    // }
+    if input.mouse_pressed(winit::event::MouseButton::Right) {
+        if let Some(pos) = cursor_grid_pos {
+            let i = pos.index(W as u32) as usize;
+            state.world.cells.r[i] = Element {
+                name: "Stone".into(),
+                attributes: vec![Attribute::Immovable, Attribute::Solid],
+                color: ElementColor {
+                    r: 60.0 / 255.0,
+                    g: 60.0 / 255.0,
+                    b: 60.0 / 255.0,
+                },
+                heat: 0.0,
+                moisture: 0.0,
+                mass: 10.0,
+            };
+        }
+        // if let Some(pos) = cursor_grid_pos {
+        //     let i = pos.index(W as u32) as usize;
+        //     state.world.cells.r[i] = Element {
+        //         name: "Oil".into(),
+        //         attributes: vec![Attribute::Fallable, Attribute::Liquid],
+        //         color: ElementColor {
+        //             r: 36.0 / 255.0,
+        //             g: 32.0 / 255.0,
+        //             b: 30.0 / 255.0,
+        //         },
+        //         heat: 0.0,
+        //         moisture: 0.0,
+        //         mass: 0.8,
+        //     };
+        // }
+        // if let Some(pos) = cursor_grid_pos {
+        //     let i = pos.index(W as u32) as usize;
+        //     state.world.cells.r[i] = Element {
+        //         name: "Dirt".into(),
+        //         attributes: vec![Attribute::Fallable, Attribute::Solid],
+        //         color: ElementColor {
+        //             r: 115.0 / 255.0,
+        //             g: 66.0 / 255.0,
+        //             b: 33.0 / 255.0,
+        //         },
+        //         heat: 0.0,
+        //         moisture: 0.0,
+        //         mass: 8.5,
+        //     };
+        // }
+    }
     // if input.just_pressed(Key::Left) {
     //     if let Some(pos) = cursor_grid_pos {
     //         let i = pos.index(state.world.width() as u32) as usize;
@@ -126,7 +174,7 @@ pub fn update(
         }
     }
 
-    // if input.just_pressed(Key::C) {
+    // if input.just_pressed(Key::C) || false {
     state.world.update(t_delta.as_secs_f32());
     // }
 
