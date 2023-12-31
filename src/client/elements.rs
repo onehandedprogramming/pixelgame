@@ -3,14 +3,16 @@ use std::collections::HashMap;
 use lazy_static::lazy_static;
 use rand::Rng;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Hash)]
 pub enum ElementType {
     Air,
     Water,
     Sand,
+    Dirt,
     Stone,
     Steam,
     Bendium,
+    Robustium,
 }
 
 lazy_static! {
@@ -44,7 +46,7 @@ lazy_static! {
                     Attribute::CanFall,
                     Attribute::Liquid,
                     Attribute::CanEvaporate(ElementType::Steam),
-                    Attribute::VaryColor,
+                    Attribute::Sparkle,
                 ],
                 ElementColor {
                     r: 10.0 / 255.0,
@@ -82,14 +84,34 @@ lazy_static! {
             ),
         );
         m.insert(
+            ElementType::Dirt,
+            Element::new(
+                "Dirt",
+                vec![Attribute::CanFall, Attribute::Solid],
+                ElementColor {
+                    r: 26.0 / 255.0,
+                    g: 15.0 / 255.0,
+                    b: 7.3 / 255.0,
+                    rv: 0.005,
+                    gv: 0.005,
+                    bv: 0.00,
+                    dv: 0.02,
+                    ..Default::default()
+                },
+                0.0,
+                0.0,
+                7.0,
+            ),
+        );
+        m.insert(
             ElementType::Stone,
             Element::new(
                 "Stone",
                 vec![Attribute::Immovable, Attribute::Solid],
                 ElementColor {
-                    r: 60.0 / 255.0,
-                    g: 60.0 / 255.0,
-                    b: 60.0 / 255.0,
+                    r: 40.0 / 255.0,
+                    g: 40.0 / 255.0,
+                    b: 40.0 / 255.0,
                     rv: 0.01,
                     gv: 0.02,
                     bv: 0.03,
@@ -99,6 +121,26 @@ lazy_static! {
                 0.0,
                 0.0,
                 10.0,
+            ),
+        );
+        m.insert(
+            ElementType::Robustium,
+            Element::new(
+                "Robustium",
+                vec![Attribute::PillarLike(0.08), Attribute::CanFall],
+                ElementColor {
+                    r: 7.5 / 255.0,
+                    g: 25.0 / 255.0,
+                    b: 5.5 / 255.0,
+                    rv: 0.00,
+                    gv: 0.05,
+                    bv: 0.00,
+                    dv: 0.05,
+                    ..Default::default()
+                },
+                0.0,
+                0.0,
+                2.5,
             ),
         );
         m.insert(
@@ -132,16 +174,17 @@ lazy_static! {
                 vec![
                     Attribute::CanFall,
                     Attribute::Liquid,
+                    Attribute::Sparkle,
                 ],
                 ElementColor {
                     r: 0.5,
                     g: 0.5,
                     b: 0.5,
-                    rv: 0.5,
-                    gv: 0.5,
-                    bv: 0.5,
+                    rv: 0.06,
+                    gv: 0.04,
+                    bv: 0.01,
                     dv: 0.0,
-                    ..Default::default()
+                    max_dist: 0.5
                 },
                 0.0,
                 0.0,
@@ -166,12 +209,13 @@ macro_rules! get_element {
 pub enum Attribute {
     CanEvaporate(ElementType),
     CanCondensate(ElementType),
+    PillarLike(f32),
     CanFall,
     Solid,
     Liquid,
     Gas,
     Immovable,
-    VaryColor,
+    Sparkle,
     Air,
 }
 
@@ -233,6 +277,7 @@ pub struct Element {
     pub heat: f32,
     pub moisture: f32,
     pub density: f32,
+    pub falling: bool,
 }
 
 impl Element {
@@ -256,6 +301,7 @@ impl Element {
             heat,
             moisture,
             density,
+            falling: true,
         }
     }
 

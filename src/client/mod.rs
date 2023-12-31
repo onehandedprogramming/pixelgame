@@ -8,6 +8,7 @@ mod update;
 mod world;
 mod swap_buffer;
 mod elements;
+mod reactions;
 
 pub use state::*;
 pub use run::*;

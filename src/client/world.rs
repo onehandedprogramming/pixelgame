@@ -22,8 +22,11 @@ impl World {
 
         let cells = (0..W * H)
             .map(|_| {
-                if rng.gen::<bool>() {
-                    get_element!(ElementType::Water)
+                let random_value = rng.gen_range(0..7);
+                if random_value < 2 {
+                    get_element!(ElementType::Dirt)
+                } else if random_value < 4 {
+                    get_element!(ElementType::Air)
                 } else {
                     get_element!(ElementType::Air)
                 }
@@ -75,10 +78,14 @@ fn update_main(rng: &mut rand::prelude::ThreadRng, ew: &mut Vec<Element>) {
             let cell_index = y * W + x;
             let cell = &ew[y * W + x];
             if cell.attributes.contains(&Attribute::CanFall) {
-                let positions_to_check = if rng.gen() {
-                    [(0, -1), (-1, -1), (1, -1)]
+                let positions_to_check = if cell.falling {
+                    if rng.gen() {
+                        vec![(0, -1), (-1, -1), (1, -1)]
+                    } else {
+                        vec![(0, -1), (1, -1), (-1, -1)]
+                    }
                 } else {
-                    [(0, -1), (1, -1), (-1, -1)]
+                    vec![(0, -1)]
                 };
 
                 if let Some((dx, dy)) = positions_to_check.iter().find(|&&(dx, dy)| {
@@ -100,7 +107,8 @@ fn update_main(rng: &mut rand::prelude::ThreadRng, ew: &mut Vec<Element>) {
                     let liquid_and_gas = cell.attributes.contains(&Attribute::Liquid)
                         && other_cell.attributes.contains(&Attribute::Gas);
 
-                    !current_cell_immovable && !other_cell_immovable
+                    !current_cell_immovable
+                        && !other_cell_immovable
                         && !liquid_and_gas
                         && (!both_cells_solid && other_cell.density < cell.density)
                 }) {
@@ -145,11 +153,6 @@ fn update_main(rng: &mut rand::prelude::ThreadRng, ew: &mut Vec<Element>) {
                     let liquid_and_gas = cell.attributes.contains(&Attribute::Liquid)
                         && other_cell.attributes.contains(&Attribute::Gas);
 
-                    // if cell.id == "Bendium".into() && other_cell_immovable {
-                    //     println!("Result: {}", !liquid_and_gas && !other_cell_immovable
-                    //     && other_cell.density < cell.density);
-                    // }
-
                     !liquid_and_gas && !other_cell_immovable && other_cell.density < cell.density
                 }) {
                     let new_x = x as isize + dx;
@@ -167,7 +170,7 @@ fn update_main(rng: &mut rand::prelude::ThreadRng, ew: &mut Vec<Element>) {
         while y < H {
             let cell = &mut ew[y * W + x];
 
-            if cell.attributes.contains(&Attribute::VaryColor) {
+            if cell.attributes.contains(&Attribute::Sparkle) {
                 cell.vary_color();
             }
 
@@ -288,7 +291,8 @@ fn update_gases(rng: &mut rand::prelude::ThreadRng, ew: &mut Vec<Element>) {
                         || other_cell.attributes.contains(&Attribute::Liquid)
                         || other_cell.attributes.contains(&Attribute::Air);
 
-                    !current_cell_immovable && !other_cell_immovable
+                    !current_cell_immovable
+                        && !other_cell_immovable
                         && (other_cell_fluid && other_cell.density > cell.density)
                 }) {
                     let new_x = x as isize + dx;

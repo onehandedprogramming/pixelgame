@@ -95,9 +95,9 @@ pub fn update(
         //         name: "Dirt".into(),
         //         attributes: vec![Attribute::Fallable, Attribute::Solid],
         //         color: ElementColor {
-        //             r: 115.0 / 255.0,
-        //             g: 66.0 / 255.0,
-        //             b: 33.0 / 255.0,
+                    // r: 115.0 / 255.0,
+                    // g: 66.0 / 255.0,
+                    // b: 33.0 / 255.0,
         //         },
         //         heat: 0.0,
         //         moisture: 0.0,
