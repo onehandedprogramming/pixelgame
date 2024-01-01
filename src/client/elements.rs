@@ -10,9 +10,10 @@ pub enum ElementType {
     Sand,
     Dirt,
     Stone,
+    Metal,
     Steam,
-    Bendium,
     Robustium,
+    Bendium,
 }
 
 lazy_static! {
@@ -36,7 +37,7 @@ lazy_static! {
                 },
                 0.0,
                 0.0,
-                0.05,
+                0.12,
             ),
         );
         m.insert(
@@ -83,7 +84,7 @@ lazy_static! {
                 },
                 0.0,
                 0.0,
-                5.0,
+                1.5,
             ),
         );
         m.insert(
@@ -104,7 +105,7 @@ lazy_static! {
                 },
                 0.0,
                 0.0,
-                7.0,
+                1.2,
             ),
         );
         m.insert(
@@ -125,9 +126,55 @@ lazy_static! {
                 },
                 0.0,
                 0.0,
-                10.0,
+                2.67,
             ),
         );
+        m.insert(
+            ElementType::Metal,
+            Element::new(
+                "Metal",
+                ElementType::Metal,
+                vec![Attribute::Immovable, Attribute::Solid, Attribute::Conductive],
+                ElementColor {
+                    r: 100.0 / 255.0,
+                    g: 100.0 / 255.0,
+                    b: 110.0 / 255.0,
+                    rv: 0.02,
+                    gv: 0.02,
+                    bv: 0.03,
+                    dv: 0.05,
+                    ..Default::default()
+                },
+                0.0,
+                0.0,
+                7.8,
+            ),
+        );
+        m.insert(
+            ElementType::Steam,
+            Element::new(
+                "Steam",
+                ElementType::Steam,
+                vec![
+                    Attribute::Gas,
+                    Attribute::CanCondensate(ElementType::Water),
+                ],
+                ElementColor {
+                    r: 150.0 / 255.0,
+                    g: 220.0 / 255.0,
+                    b: 230.0 / 255.0,
+                    rv: 0.01,
+                    gv: 0.03,
+                    bv: 0.07,
+                    dv: 0.01,
+                    ..Default::default()
+                },
+                0.0,
+                0.0,
+                0.08,
+            ),
+        );
+        
         m.insert(
             ElementType::Robustium,
             Element::new(
@@ -146,32 +193,7 @@ lazy_static! {
                 },
                 0.0,
                 0.0,
-                2.5,
-            ),
-        );
-        m.insert(
-            ElementType::Steam,
-            Element::new(
-                "Steam",
-                ElementType::Steam,
-                vec![
-                    Attribute::CanFall,
-                    Attribute::Gas,
-                    Attribute::CanCondensate(ElementType::Water),
-                ],
-                ElementColor {
-                    r: 150.0 / 255.0,
-                    g: 220.0 / 255.0,
-                    b: 230.0 / 255.0,
-                    rv: 0.01,
-                    gv: 0.03,
-                    bv: 0.07,
-                    dv: 0.01,
-                    ..Default::default()
-                },
-                0.0,
-                0.0,
-                0.01,
+                1.7,
             ),
         );
         m.insert(
@@ -196,7 +218,7 @@ lazy_static! {
                 },
                 0.0,
                 0.0,
-                1.5,
+                1.05,
             ),
         );
         m
@@ -218,6 +240,7 @@ pub enum Attribute {
     CanEvaporate(ElementType),
     CanCondensate(ElementType),
     PillarLike(f32),
+    Conductive,
     CanFall,
     Solid,
     Liquid,

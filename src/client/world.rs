@@ -338,6 +338,7 @@ fn update_gases(rng: &mut rand::prelude::ThreadRng, ew: &mut Vec<Element>) {
                     let new_x = x as isize + dx;
                     let new_y = y as isize + dy;
                     ew.swap(cell_index, new_y as usize * W + new_x as usize);
+                    
                     if repeat_once {
                         repeat_once = false;
                         y -= 1;
