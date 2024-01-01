@@ -29,8 +29,8 @@ impl ReactionKey {
     }
 }
 
-pub fn check_reaction(a: ElementType, b: ElementType) -> Option<ChemicalReaction> {
-    REACTIONS.get(&ReactionKey::new(a, b)).cloned()
+pub fn check_reaction(a: &ElementType, b: &ElementType) -> Option<ChemicalReaction> {
+    REACTIONS.get(&ReactionKey::new(a.clone(), b.clone())).cloned()
 }
 
 #[derive(Clone, Debug, PartialEq)]

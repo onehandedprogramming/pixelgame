@@ -22,6 +22,7 @@ lazy_static! {
             ElementType::Air,
             Element::new(
                 "Air",
+                ElementType::Air,
                 vec![Attribute::Air],
                 ElementColor {
                     r: 80.0 / 255.0,
@@ -42,6 +43,7 @@ lazy_static! {
             ElementType::Water,
             Element::new(
                 "Water",
+                ElementType::Water,
                 vec![
                     Attribute::CanFall,
                     Attribute::Liquid,
@@ -67,6 +69,7 @@ lazy_static! {
             ElementType::Sand,
             Element::new(
                 "Sand",
+                ElementType::Sand,
                 vec![Attribute::CanFall, Attribute::Solid],
                 ElementColor {
                     r: 210.0 / 255.0,
@@ -87,6 +90,7 @@ lazy_static! {
             ElementType::Dirt,
             Element::new(
                 "Dirt",
+                ElementType::Dirt,
                 vec![Attribute::CanFall, Attribute::Solid],
                 ElementColor {
                     r: 26.0 / 255.0,
@@ -107,6 +111,7 @@ lazy_static! {
             ElementType::Stone,
             Element::new(
                 "Stone",
+                ElementType::Stone,
                 vec![Attribute::Immovable, Attribute::Solid],
                 ElementColor {
                     r: 40.0 / 255.0,
@@ -127,6 +132,7 @@ lazy_static! {
             ElementType::Robustium,
             Element::new(
                 "Robustium",
+                ElementType::Robustium,
                 vec![Attribute::PillarLike(0.08), Attribute::CanFall],
                 ElementColor {
                     r: 7.5 / 255.0,
@@ -147,6 +153,7 @@ lazy_static! {
             ElementType::Steam,
             Element::new(
                 "Steam",
+                ElementType::Steam,
                 vec![
                     Attribute::CanFall,
                     Attribute::Gas,
@@ -171,6 +178,7 @@ lazy_static! {
             ElementType::Bendium,
             Element::new(
                 "Bendium",
+                ElementType::Bendium,
                 vec![
                     Attribute::CanFall,
                     Attribute::Liquid,
@@ -188,7 +196,7 @@ lazy_static! {
                 },
                 0.0,
                 0.0,
-                20.0,
+                1.5,
             ),
         );
         m
@@ -270,7 +278,8 @@ pub struct RenderColor {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Element {
-    pub id: Box<str>,
+    pub name: Box<str>,
+    pub id: ElementType,
     pub attributes: Vec<Attribute>,
     pub color: ElementColor,
     render_color: RenderColor,
@@ -282,7 +291,8 @@ pub struct Element {
 
 impl Element {
     pub fn new(
-        id: &str,
+        name: &str,
+        id: ElementType,
         attributes: Vec<Attribute>,
         color: ElementColor,
         heat: f32,
@@ -290,7 +300,8 @@ impl Element {
         density: f32,
     ) -> Self {
         Element {
-            id: id.into(),
+            name: name.into(),
+            id,
             attributes,
             color,
             render_color: RenderColor {

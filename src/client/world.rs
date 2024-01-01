@@ -2,7 +2,7 @@ use crate::{client::elements::ElementType, get_element};
 
 use super::{
     elements::{Attribute, Element},
-    swap_buffer::SwapBuffer,
+    swap_buffer::SwapBuffer, reactions::check_reaction,
 };
 use rand::Rng;
 
@@ -48,6 +48,7 @@ impl World {
 
         update_main(rng, ew);
         update_gases(rng, ew);
+        update_chemistry(rng, ew);
 
         self.cells.swap();
     }
@@ -58,6 +59,45 @@ impl World {
                 buf[j * W + i] = self.cells.r[j * W + i].render();
             }
         }
+    }
+}
+
+fn update_chemistry(rng: &mut rand::prelude::ThreadRng, ew: &mut Vec<Element>) {
+    let (startx, endx, step) = if rng.gen::<bool>() {
+        (0 as i32, W as i32, 1 as i32)
+    } else {
+        ((W - 1) as i32, -1, -1)
+    };
+
+    let mut ix = startx;
+    while ix != endx {
+        let x = ix as usize;
+
+        let mut y = 0;
+        while y < H {
+            let cell_index = y * W + x;
+            let cell_element_type = &ew[cell_index].id.clone();
+
+            let directions = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+            for &(dx, dy) in &directions {
+                let new_x = (x as isize + dx) as usize;
+                let new_y = (y as isize + dy) as usize;
+
+                if in_bounds(new_x as isize, new_y as isize) {
+                    let other_cell_index = new_y * W + new_x;
+                    let other_element_type = &ew[new_y * W + new_x].id.clone();
+                    
+                    if let Some(reaction) = check_reaction(cell_element_type, other_element_type) {
+                        ew[cell_index] = get_element!(reaction.result);
+                        ew[other_cell_index] = get_element!(ElementType::Air);
+                    }
+                }
+            }
+
+            y += 1;
+        }
+
+        ix = ix as i32 + step;
     }
 }
 
